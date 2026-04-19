@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="pt" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Autenticação – FlowIn</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200 antialiased">
+
+    <div class="flex flex-col md:flex-row min-h-screen">
+        <!-- Left Branding Column -->
+        <div class="hidden md:flex md:w-2/5 lg:w-1/3 bg-slate-900 p-8 flex-col justify-between" style="background-image: url('https://placehold.co/800x1200/0f172a/334155?text='); background-size: cover; background-position: center;">
+            <div>
+                 <a href="index.html" class="flex items-center space-x-2">
+                    <svg class="h-8 w-auto text-orange-500" viewBox="0 0 32 32" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                        <path fill-rule="evenodd" clip-rule="evenodd" d="M16 32C24.8366 32 32 24.8366 32 16C32 7.16344 24.8366 0 16 0C7.16344 0 0 7.16344 0 16C0 24.8366 7.16344 32 16 32ZM13.0125 10.3958C12.5942 9.97746 12.5942 9.30948 13.0125 8.89115C13.4308 8.47281 14.0988 8.47281 14.5171 8.89115L19.804 14.178C20.221 14.5949 20.2223 15.263 19.8073 15.6817L14.5203 21.1067C14.0999 21.5292 13.4326 21.5292 13.0122 21.1067C12.5918 20.6842 12.5918 20.0169 13.0122 19.5944L17.3989 15.076L13.0125 10.3958Z"/>
+                    </svg>
+                    <span class="text-2xl font-bold text-white">FlowIn</span>
+                </a>
+                <div class="mt-12 text-white">
+                    <h1 class="text-4xl font-bold leading-tight">Gestor Comercial Inteligente para o seu Negócio.</h1>
+                    <p class="mt-4 text-slate-300">Simplifique a sua gestão, automatize os seus relatórios e impulsione as suas vendas. Tudo num só lugar.</p>
+                </div>
+            </div>
+            <div class="text-sm text-slate-400">
+                &copy; 2025 FlowIn. Todos os direitos reservados.
+            </div>
+        </div>
+
+        <!-- Right Form Column -->
+        <div class="w-full md:w-3/5 lg:w-2/3 flex flex-col items-center justify-center p-4 sm:p-6 lg:p-8">
+            <div class="w-full max-w-md">
+                <!-- Mobile Logo -->
+                <div class="mb-6 md:hidden">
+                    <a href="index.html" class="flex items-center space-x-2">
+                        <svg class="h-8 w-auto text-orange-500" viewBox="0 0 32 32" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M16 32C24.8366 32 32 24.8366 32 16C32 7.16344 24.8366 0 16 0C7.16344 0 0 7.16344 0 16C0 24.8366 7.16344 32 16 32ZM13.0125 10.3958C12.5942 9.97746 12.5942 9.30948 13.0125 8.89115C13.4308 8.47281 14.0988 8.47281 14.5171 8.89115L19.804 14.178C20.221 14.5949 20.2223 15.263 19.8073 15.6817L14.5203 21.1067C14.0999 21.5292 13.4326 21.5292 13.0122 21.1067C12.5918 20.6842 12.5918 20.0169 13.0122 19.5944L17.3989 15.076L13.0125 10.3958Z"/></svg>
+                        <span class="text-2xl font-bold text-slate-800 dark:text-white">FlowIn</span>
+                    </a>
+                </div>
+                <!-- Auth Card -->
+                <div class="w-full bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-6 sm:p-8 border border-slate-200 dark:border-slate-700">
+                    <!-- Tabs -->
+                    <div class="flex border-b border-slate-200 dark:border-slate-700">
+                        <button id="login-tab" class="flex-1 py-3 text-sm font-semibold text-orange-500 border-b-2 border-orange-500 focus:outline-none">Entrar</button>
+                        <button id="register-tab" class="flex-1 py-3 text-sm font-semibold text-slate-500 dark:text-slate-400 focus:outline-none">Registar</button>
+                    </div>
+
+                    <!-- Login Form -->
+                    <div id="login-form" class="">
+                        <form class="mt-6 space-y-5">
+                            <div>
+                                <label for="login-email" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Email ou Telemóvel</label>
+                                <div class="mt-1">
+                                    <input id="login-email" name="email" type="email" autocomplete="email" required class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-orange-500 focus:border-orange-500 sm:text-sm bg-white dark:bg-slate-800">
+                                </div>
+                            </div>
+                            <div>
+                                <label for="login-password" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Palavra-passe</label>
+                                <div class="mt-1">
+                                    <input id="login-password" name="password" type="password" autocomplete="current-password" required class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-orange-500 focus:border-orange-500 sm:text-sm bg-white dark:bg-slate-800">
+                                </div>
+                            </div>
+                            <div class="text-right text-sm">
+                                <a href="#" class="font-medium text-orange-600 hover:text-orange-500">Esqueceu a palavra-passe?</a>
+                            </div>
+                            <div>
+                                <button type="submit" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 dark:focus:ring-offset-slate-900">Entrar no Sistema</button>
+                            </div>
+                            <div class="relative flex py-2 items-center">
+                                <div class="flex-grow border-t border-slate-300 dark:border-slate-600"></div>
+                                <span class="flex-shrink mx-4 text-xs text-slate-500 dark:text-slate-400">OU</span>
+                                <div class="flex-grow border-t border-slate-300 dark:border-slate-600"></div>
+                            </div>
+                            <div>
+                                <button type="button" class="w-full flex justify-center items-center py-3 px-4 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm text-sm font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500">
+                                    <svg class="h-5 w-5 mr-2" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"></path><path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"></path><path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.223,0-9.657-3.356-11.303-8H2.394v8C6.396,40.62,14.493,44,24,44z"></path><path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.574l6.19,5.238C39.904,36.126,44,30.638,44,24C44,22.659,43.862,21.35,43.611,20.083z"></path></svg>
+                                    Entrar com o Google
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Register Form (remains the same multi-step form) -->
+                    <div id="register-form" class="hidden">
+                        <!-- Step 1: Personal Data -->
+                        <div id="step-1">
+                            <form class="mt-6 space-y-4" novalidate>
+                                <div class="text-center mb-4">
+                                    <h3 class="text-xl font-bold text-slate-900 dark:text-white">Passo 1 de 3: Dados Pessoais</h3>
+                                </div>
+                                <!-- ... existing registration step 1 fields ... -->
+                                <div>
+                                    <label for="register-owner-name" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Nome Completo</label>
+                                    <input id="register-owner-name" name="owner-name" type="text" autocomplete="name" required minlength="6" class="mt-1 w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm bg-white dark:bg-slate-800 focus:outline-none focus:ring-orange-500 focus:border-orange-500 peer">
+                                    <p class="mt-1 text-xs text-red-500 invisible peer-invalid:visible">Digite o seu nome completo (mínimo 6 caracteres).</p>
+                                </div>
+                                <div>
+                                    <label for="register-email" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Email</label>
+                                    <input id="register-email" name="email" type="email" autocomplete="email" required class="mt-1 w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm bg-white dark:bg-slate-800 focus:outline-none focus:ring-orange-500 focus:border-orange-500 peer">
+                                    <p class="mt-1 text-xs text-red-500 invisible peer-invalid:visible">Digite um endereço de email válido.</p>
+                                </div>
+                                <div>
+                                    <label for="register-password" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Palavra-passe</label>
+                                    <input id="register-password" name="password" type="password" required pattern="^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$" class="mt-1 w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm bg-white dark:bg-slate-800 focus:outline-none focus:ring-orange-500 focus:border-orange-500 peer">
+                                    <p class="mt-1 text-xs text-red-500 invisible peer-invalid:visible">A senha deve ter no mínimo 8 caracteres, com letras e números.</p>
+                                </div>
+                                <div>
+                                    <label for="register-confirm-password" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Confirmar Palavra-passe</label>
+                                    <input id="register-confirm-password" name="confirm-password" type="password" required class="mt-1 w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm bg-white dark:bg-slate-800 focus:outline-none focus:ring-orange-500 focus:border-orange-500 peer">
+                                    <p id="confirm-password-error" class="mt-1 text-xs text-red-500 invisible">As senhas não coincidem.</p>
+                                </div>
+                                <div>
+                                    <label for="register-id-number" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Nº de Identificação (BI)</label>
+                                    <input id="register-id-number" name="id-number" type="text" required pattern="^[a-zA-Z0-9]+$" class="mt-1 w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm bg-white dark:bg-slate-800 focus:outline-none focus:ring-orange-500 focus:border-orange-500 peer">
+                                    <p class="mt-1 text-xs text-red-500 invisible peer-invalid:visible">Por favor, insira um número de BI válido.</p>
+                                </div>
+                                <div class="space-y-2">
+                                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Carregar Documento de Identificação</label>
+                                    <div>
+                                        <label for="id-front" class="text-xs text-slate-500 dark:text-slate-400">Frente do Documento (PDF, JPG, PNG até 5MB)</label>
+                                        <input id="id-front" name="id-front" type="file" accept="application/pdf,image/jpeg,image/png" capture="environment" class="mt-1 w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100" required>
+                                        <img id="id-front-preview" class="hidden mt-2 h-24 w-auto rounded-md border border-slate-200 dark:border-slate-700"/>
+                                    </div>
+                                    <div>
+                                        <label for="id-back" class="text-xs text-slate-500 dark:text-slate-400">Verso do Documento (PDF, JPG, PNG até 5MB)</label>
+                                        <input id="id-back" name="id-back" type="file" accept="application/pdf,image/jpeg,image/png" capture="environment" class="mt-1 w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100" required>
+                                        <img id="id-back-preview" class="hidden mt-2 h-24 w-auto rounded-md border border-slate-200 dark:border-slate-700"/>
+                                    </div>
+                                    <p id="file-upload-error" class="mt-1 text-xs text-red-500 invisible">Formato ou tamanho inválido. Aceitamos PDF, JPG ou PNG até 5MB.</p>
+                                </div>
+                                <div class="pt-2">
+                                    <button type="button" id="next-to-step-2" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 disabled:bg-slate-400 dark:disabled:bg-slate-600" disabled>Continuar</button>
+                                </div>
+                            </form>
+                        </div>
+                        <!-- Step 2: Company Data -->
+                        <div id="step-2" class="hidden">
+                             <form class="mt-6 space-y-4" novalidate>
+                                <div class="text-center mb-4">
+                                     <h3 class="text-xl font-bold text-slate-900 dark:text-white">Passo 2 de 3: Dados da Empresa</h3>
+                                </div>
+                                <!-- ... existing registration step 2 fields ... -->
+                                <div>
+                                    <label for="register-company-name" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Nome da Empresa</label>
+                                    <input id="register-company-name" name="company-name" type="text" required minlength="3" class="mt-1 w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm bg-white dark:bg-slate-800 focus:outline-none focus:ring-orange-500 focus:border-orange-500 peer">
+                                    <p class="mt-1 text-xs text-red-500 invisible peer-invalid:visible">O nome da empresa deve ter no mínimo 3 caracteres.</p>
+                                </div>
+                                <div>
+                                    <label for="register-company-nif" class="block text-sm font-medium text-slate-700 dark:text-slate-300">NIF (Nº de Identificação Fiscal)</label>
+                                    <input id="register-company-nif" name="company-nif" type="text" required minlength="5" maxlength="14" class="mt-1 w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm bg-white dark:bg-slate-800 focus:outline-none focus:ring-orange-500 focus:border-orange-500 peer">
+                                    <p class="mt-1 text-xs text-red-500 invisible peer-invalid:visible">O NIF deve ter entre 5 e 14 caracteres.</p>
+                                </div>
+                                <div>
+                                    <label for="register-company-sector" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Sector de Atividade</label>
+                                    <select id="register-company-sector" name="company-sector" required class="mt-1 w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm bg-white dark:bg-slate-800 focus:outline-none focus:ring-orange-500 focus:border-orange-500 peer">
+                                        <option value="" disabled selected>Selecione um sector</option>
+                                        <option value="comercio">Comércio</option>
+                                        <option value="servicos">Serviços</option>
+                                        <option value="industria">Indústria</option>
+                                        <option value="outro">Outro</option>
+                                    </select>
+                                    <p class="mt-1 text-xs text-red-500 invisible peer-invalid:visible">Selecione o sector da empresa.</p>
+                                </div>
+                                <div class="flex items-center justify-between space-x-4 pt-2">
+                                    <button type="button" id="back-to-step-1" class="w-full flex justify-center py-3 px-4 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm text-sm font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600 focus:outline-none">Voltar</button>
+                                    <button type="button" id="next-to-step-3" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 focus:outline-none disabled:bg-slate-400 dark:disabled:bg-slate-600" disabled>Continuar</button>
+                                </div>
+                            </form>
+                        </div>
+                        <!-- Step 3: Consent -->
+                        <div id="step-3" class="hidden">
+                            <form class="mt-6 space-y-6" id="final-form">
+                                <div class="text-center">
+                                    <h3 class="text-xl font-bold text-slate-900 dark:text-white">Passo 3 de 3: Consentimento</h3>
+                                </div>
+                                <div class="flex items-start p-4 bg-slate-100 dark:bg-slate-700/50 rounded-lg">
+                                    <div class="flex items-center h-5">
+                                        <input id="terms" name="terms" type="checkbox" required class="h-4 w-4 text-orange-600 focus:ring-orange-500 border-slate-300 dark:border-slate-500 rounded">
+                                    </div>
+                                    <div class="ml-3 text-sm">
+                                        <label for="terms" class="font-medium text-slate-700 dark:text-slate-300">Eu confirmo que os dados inseridos são verdadeiros e autorizo o seu processamento de acordo com a <button type="button" id="open-privacy-policy" class="text-orange-500 hover:underline font-semibold">Política de Privacidade</button>.</label>
+                                    </div>
+                                </div>
+                                <div class="flex items-center justify-between space-x-4">
+                                    <button type="button" id="back-to-step-2" class="w-full flex justify-center py-3 px-4 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm text-sm font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600 focus:outline-none">Voltar</button>
+                                    <button type="submit" id="create-account-btn" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 focus:outline-none disabled:bg-slate-400 dark:disabled:bg-slate-600" disabled>Criar Conta</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Privacy Policy Modal -->
+    <div id="privacy-policy-modal" class="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-4 hidden z-50">
+        <div class="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+            <div class="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
+                <h3 class="text-lg font-bold text-slate-900 dark:text-white">Política de Privacidade</h3>
+                <button id="close-privacy-policy" class="text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white">&times;</button>
+            </div>
+            <div class="p-6 overflow-y-auto space-y-4 text-sm text-slate-600 dark:text-slate-300">
+                <p><strong>Última atualização:</strong> 12 de Setembro de 2025</p>
+                <p>A sua privacidade é importante para nós. É política do FlowIn respeitar a sua privacidade em relação a qualquer informação sua que possamos coletar no site FlowIn, e outros sites que possuímos e operamos.</p>
+                <h4 class="font-semibold text-slate-800 dark:text-slate-200 pt-2">1. Coleta de Dados</h4>
+                <p>Solicitamos informações pessoais apenas quando realmente precisamos delas para lhe fornecer um serviço. Fazemo-lo por meios justos e legais, com o seu conhecimento e consentimento. Também informamos por que estamos coletando e como será usado.</p>
+                <h4 class="font-semibold text-slate-800 dark:text-slate-200 pt-2">2. Uso dos Dados</h4>
+                <p>Os dados pessoais e empresariais fornecidos durante o registo são utilizados para criar e gerir a sua conta, garantir a segurança da plataforma, e cumprir com as obrigações legais fiscais de Angola. Os documentos de identificação são usados unicamente para verificação de identidade e não são partilhados com terceiros, exceto quando exigido por lei.</p>
+                 <h4 class="font-semibold text-slate-800 dark:text-slate-200 pt-2">3. Segurança dos Dados</h4>
+                <p>Apenas retemos as informações coletadas pelo tempo necessário para fornecer o serviço solicitado. Quando armazenamos dados, protegemos dentro de meios comercialmente aceitáveis para evitar perdas e roubos, bem como acesso, divulgação, cópia, uso ou modificação não autorizados.</p>
+                 <h4 class="font-semibold text-slate-800 dark:text-slate-200 pt-2">4. Consentimento</h4>
+                 <p>Ao marcar a caixa de consentimento e criar uma conta, você confirma que leu, compreendeu e concorda com o processamento dos seus dados conforme descrito nesta política.</p>
+                <p>O usuário se compromete a fazer uso adequado dos conteúdos e da informação que o FlowIn oferece no site e com caráter enunciativo, mas não limitativo: A) Não se envolver em atividades que sejam ilegais ou contrárias à boa fé e à ordem pública; B) Não difundir propaganda ou conteúdo de natureza racista, xenofóbica, ou sobre azar, qualquer tipo de pornografia ilegal, de apologia ao terrorismo ou contra os direitos humanos; C) Não causar danos aos sistemas físicos (hardwares) e lógicos (softwares) do FlowIn, de seus fornecedores ou terceiros, para introduzir ou disseminar vírus informáticos ou quaisquer outros sistemas de hardware ou software que sejam capazes de causar os danos anteriormente mencionados.</p>
+            </div>
+            <div class="p-4 border-t border-slate-200 dark:border-slate-700 text-right">
+                <button id="close-privacy-policy-footer" class="px-4 py-2 text-sm font-semibold text-white bg-orange-500 rounded-lg hover:bg-orange-600">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const loginTab = document.getElementById('login-tab');
+            const registerTab = document.getElementById('register-tab');
+            const loginForm = document.getElementById('login-form');
+            const registerForm = document.getElementById('register-form');
+
+            // Step containers and forms
+            const steps = {
+                '1': { container: document.getElementById('step-1'), form: document.querySelector('#step-1 form') },
+                '2': { container: document.getElementById('step-2'), form: document.querySelector('#step-2 form') },
+                '3': { container: document.getElementById('step-3'), form: document.querySelector('#step-3 form') }
+            };
+
+            // Navigation buttons
+            const nextToStep2 = document.getElementById('next-to-step-2');
+            const backToStep1 = document.getElementById('back-to-step-1');
+            const nextToStep3 = document.getElementById('next-to-step-3');
+            const backToStep2 = document.getElementById('back-to-step-2');
+            const createAccountBtn = document.getElementById('create-account-btn');
+            
+            // File Uploads
+            const idFrontInput = document.getElementById('id-front');
+            const idBackInput = document.getElementById('id-back');
+            const idFrontPreview = document.getElementById('id-front-preview');
+            const idBackPreview = document.getElementById('id-back-preview');
+            const fileUploadError = document.getElementById('file-upload-error');
+
+            // Password confirmation
+            const passwordInput = document.getElementById('register-password');
+            const confirmPasswordInput = document.getElementById('register-confirm-password');
+            const confirmPasswordError = document.getElementById('confirm-password-error');
+            
+            // Privacy Policy Modal
+            const modal = document.getElementById('privacy-policy-modal');
+            const openModalBtn = document.getElementById('open-privacy-policy');
+            const closeModalBtns = [document.getElementById('close-privacy-policy'), document.getElementById('close-privacy-policy-footer')];
+
+
+            const showStep = (stepToShow) => {
+                Object.values(steps).forEach(s => s.container.classList.add('hidden'));
+                steps[stepToShow].container.classList.remove('hidden');
+            };
+
+            loginTab.addEventListener('click', () => {
+                loginForm.classList.remove('hidden');
+                registerForm.classList.add('hidden');
+                loginTab.classList.add('text-orange-500', 'border-orange-500');
+                loginTab.classList.remove('text-slate-500', 'dark:text-slate-400');
+                registerTab.classList.add('text-slate-500', 'dark:text-slate-400');
+                registerTab.classList.remove('text-orange-500', 'border-orange-500');
+            });
+
+            registerTab.addEventListener('click', () => {
+                registerForm.classList.remove('hidden');
+                loginForm.classList.add('hidden');
+                registerTab.classList.add('text-orange-500', 'border-orange-500');
+                registerTab.classList.remove('text-slate-500', 'dark:text-slate-400');
+                loginTab.classList.add('text-slate-500', 'dark:text-slate-400');
+                loginTab.classList.remove('text-orange-500', 'border-orange-500');
+                showStep('1');
+            });
+
+            // --- Step Navigation ---
+            nextToStep2.addEventListener('click', () => showStep('2'));
+            backToStep1.addEventListener('click', () => showStep('1'));
+            nextToStep3.addEventListener('click', () => showStep('3'));
+            backToStep2.addEventListener('click', () => showStep('2'));
+            
+            // --- Validation Logic ---
+            const checkPasswordsMatch = () => {
+                if (passwordInput.value !== confirmPasswordInput.value) {
+                    confirmPasswordError.classList.remove('invisible');
+                    confirmPasswordInput.setCustomValidity("Invalid");
+                } else {
+                    confirmPasswordError.classList.add('invisible');
+                    confirmPasswordInput.setCustomValidity("");
+                }
+            };
+            
+            passwordInput.addEventListener('input', checkPasswordsMatch);
+            confirmPasswordInput.addEventListener('input', checkPasswordsMatch);
+            
+            const validateStep1 = () => {
+                checkPasswordsMatch();
+                const isFormValid = steps['1'].form.checkValidity();
+                nextToStep2.disabled = !isFormValid;
+            };
+            
+            const validateStep2 = () => {
+                nextToStep3.disabled = !steps['2'].form.checkValidity();
+            };
+
+            const validateStep3 = () => {
+                createAccountBtn.disabled = !steps['3'].form.checkValidity();
+            };
+            
+            steps['1'].form.addEventListener('input', validateStep1);
+            steps['2'].form.addEventListener('input', validateStep2);
+            steps['3'].form.addEventListener('input', validateStep3);
+            
+            // --- File Upload Handling ---
+            const handleFileUpload = (input, preview) => {
+                const file = input.files[0];
+                fileUploadError.classList.add('invisible');
+                preview.classList.add('hidden');
+
+                if (!file) {
+                    validateStep1();
+                    return;
+                }
+
+                const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+                const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'application/pdf'];
+
+                if (file.size > MAX_SIZE || !ALLOWED_TYPES.includes(file.type)) {
+                    fileUploadError.classList.remove('invisible');
+                    input.value = ''; // Clear invalid file
+                    validateStep1();
+                    return;
+                }
+                
+                if (file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        preview.src = e.target.result;
+                        preview.classList.remove('hidden');
+                    };
+                    reader.readAsDataURL(file);
+                } else {
+                    preview.src = '';
+                    preview.classList.add('hidden');
+                }
+                
+                validateStep1();
+            };
+            
+            idFrontInput.addEventListener('change', () => handleFileUpload(idFrontInput, idFrontPreview));
+            idBackInput.addEventListener('change', () => handleFileUpload(idBackInput, idBackPreview));
+
+            // --- Privacy Policy Modal Logic ---
+            openModalBtn.addEventListener('click', () => modal.classList.remove('hidden'));
+            closeModalBtns.forEach(btn => btn.addEventListener('click', () => modal.classList.add('hidden')));
+
+            // --- Final Form Submission ---
+            steps['3'].form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                console.log("Form submitted!");
+                // 1. Collect all data from step 1, 2, and 3 forms
+                const formData = new FormData();
+                const form1Data = new FormData(steps['1'].form);
+                const form2Data = new FormData(steps['2'].form);
+
+                for (const [key, value] of form1Data.entries()) {
+                    formData.append(key, value);
+                }
+                 for (const [key, value] of form2Data.entries()) {
+                    formData.append(key, value);
+                }
+
+                console.log("Creating user and company with the following data:");
+                for (const [key, value] of formData.entries()) {
+                    if (value instanceof File) {
+                         console.log(`${key}: ${value.name} (${value.size} bytes)`);
+                    } else {
+                         console.log(`${key}: ${value}`);
+                    }
+                }
+                // 2. Simulate API call
+                alert("Conta criada com sucesso! Por favor, faça o login para continuar.");
+                // 3. Redirect to login
+                window.location.href = '#'; // Or a real login page
+                loginTab.click(); // Simulate clicking the login tab
+            });
+        });
+    </script>
+</body>
+</html>
