@@ -47,7 +47,6 @@
         /* Transição suave entre Login/Registro */
         .auth-forms-container {
             display: flex;
-            overflow: hidden;
             transition: transform 0.4s cubic-bezier(0.2, 0, 0, 1);
             height: auto;
             min-height: 650px;
@@ -71,7 +70,6 @@
         /* Multi-step com transição slide */
         .multi-step-container {
             display: flex;
-            overflow: hidden;
             transition: transform 0.4s cubic-bezier(0.2, 0, 0, 1);
         }
         
@@ -508,6 +506,7 @@
             const closeModalBtns = [document.getElementById('close-privacy-policy'), document.getElementById('close-privacy-policy-footer')];
             
             let currentStep = 1;
+            let showStep; // Declarado no scope externo para ser acessível em setupSlideTransitions
             
             function setupSlideTransitions() {
                 // === 1. Transição entre Login e Registro ===
@@ -589,7 +588,7 @@
                     });
                 }
                 
-                function showStep(stepToShow) {
+                showStep = function(stepToShow) {
                     currentStep = parseInt(stepToShow);
                     const translateX = -(currentStep - 1) * 100;
                     multiStepContainer.style.transform = `translateX(${translateX}%)`;
