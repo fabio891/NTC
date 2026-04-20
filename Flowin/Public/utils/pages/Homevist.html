@@ -131,26 +131,31 @@
         .testimonial-card:nth-child(2) { animation-delay: 0.5s; }
         .testimonial-card:nth-child(3) { animation-delay: 1s; }
         
-        /* Animação 10: Typewriter Effect */
+        /* Animação 10: Typewriter Effect - Corrigido para quebra de linha */
         .typewriter-text {
-            overflow: hidden;
-            border-right: 2px solid #f97316;
-            white-space: nowrap;
-            width: 0;
-            opacity: 0;
-        }
-        .typewriter-active {
+            overflow: visible;
+            white-space: normal;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
             width: 100%;
-            opacity: 1;
-            animation: typing 2.5s steps(40, end), blink-caret 0.75s step-end infinite;
+            display: inline;
         }
-        @keyframes typing {
-            from { width: 0; }
-            to { width: 100%; }
+        .typewriter-text::after {
+            content: '|';
+            animation: blink-caret 0.75s step-end infinite;
+            color: #f97316;
+            font-weight: bold;
+        }
+        .typewriter-active::after {
+            opacity: 1;
+        }
+        .typewriter-text.typewriter-complete::after {
+            content: '';
+            animation: none;
         }
         @keyframes blink-caret {
-            from, to { border-color: transparent; }
-            50% { border-color: #f97316; }
+            from, to { opacity: 1; }
+            50% { opacity: 0; }
         }
         
         /* Fade in para nome e cargo */
@@ -642,29 +647,37 @@
                     const authorWrapper = card.querySelector('.testimonial-author-wrapper');
                     
                     if (textElement && !textElement.classList.contains('typewriter-active')) {
-                        // Calcular duração baseada no tamanho do texto (50ms por caractere)
-                        const textLength = textElement.getAttribute('data-text').length;
-                        const duration = Math.min(2500, textLength * 50);
+                        const fullText = textElement.getAttribute('data-text');
+                        const textLength = fullText.length;
+                        const typingSpeed = 50; // 50ms por caractere
                         
-                        // Reset e ativação do typewriter
-                        textElement.style.width = '0';
-                        textElement.style.opacity = '0';
-                        textElement.style.transition = 'none';
+                        // Adicionar aspas ao texto
+                        textElement.textContent = '"';
+                        textElement.classList.add('typewriter-active');
                         
-                        setTimeout(() => {
-                            textElement.classList.add('typewriter-active');
-                            textElement.textContent = '"' + textElement.getAttribute('data-text') + '"';
-                            textElement.style.transition = `width ${duration}ms steps(${textLength}, end)`;
-                            textElement.style.width = '100%';
-                            textElement.style.opacity = '1';
-                        }, 100);
+                        let charIndex = 0;
                         
-                        // Mostrar autor e cargo após o texto com fade-in
-                        setTimeout(() => {
-                            if (authorWrapper) {
-                                authorWrapper.style.opacity = '1';
+                        function typeCharacter() {
+                            if (charIndex < textLength) {
+                                textElement.textContent += fullText.charAt(charIndex);
+                                charIndex++;
+                                setTimeout(typeCharacter, typingSpeed);
+                            } else {
+                                // Adicionar aspa final
+                                textElement.textContent += '"';
+                                textElement.classList.add('typewriter-complete');
+                                
+                                // Mostrar autor e cargo após o texto com fade-in
+                                setTimeout(() => {
+                                    if (authorWrapper) {
+                                        authorWrapper.style.opacity = '1';
+                                    }
+                                }, 200);
                             }
-                        }, duration + 300);
+                        }
+                        
+                        // Iniciar digitação após pequeno delay
+                        setTimeout(typeCharacter, 100);
                     }
                     
                     testimonialObserver.unobserve(card);
