@@ -49,11 +49,22 @@
             display: flex;
             overflow: hidden;
             transition: transform 0.4s cubic-bezier(0.2, 0, 0, 1);
+            height: auto;
+            min-height: 600px;
         }
         
         .auth-form-wrapper {
-            min-width: 100%;
-            transition: opacity 0.3s ease;
+            width: 100%;
+            flex-shrink: 0;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+            visibility: visible;
+            opacity: 1;
+        }
+        
+        .auth-form-wrapper.hidden {
+            visibility: hidden;
+            opacity: 0;
+            display: block !important;
         }
         
         /* Multi-step com transição slide */
@@ -496,25 +507,45 @@
             const closeModalBtns = [document.getElementById('close-privacy-policy'), document.getElementById('close-privacy-policy-footer')];
             
             let currentStep = 1;
-            
-            // === 1. Transição entre Login e Registro ===
             function setupSlideTransitions() {
+            function setupSlideTransitions() {            
+            // === 1. Transição entre Login e Registro ===
                 loginTab.addEventListener('click', () => {
                     authFormsContainer.style.transform = 'translateX(0)';
+                    loginForm.classList.remove('hidden');
+                    registerForm.classList.add('hidden');
+                    
+                    setTimeout(() => {
+                        loginForm.setAttribute('aria-hidden', 'false');
+                        registerForm.setAttribute('aria-hidden', 'true');
+                    }, 300);
+                    
                     loginTab.classList.add('text-orange-500', 'border-orange-500');
                     loginTab.classList.remove('text-slate-500', 'dark:text-slate-400');
                     registerTab.classList.add('text-slate-500', 'dark:text-slate-400');
                     registerTab.classList.remove('text-orange-500', 'border-orange-500');
                 });
-                
+
                 registerTab.addEventListener('click', () => {
                     authFormsContainer.style.transform = 'translateX(-100%)';
+                    registerForm.classList.remove('hidden');
+                    loginForm.classList.add('hidden');
+                    
+                    setTimeout(() => {
+                        registerForm.setAttribute('aria-hidden', 'false');
+                        loginForm.setAttribute('aria-hidden', 'true');
+                    }, 300);
+                    
                     registerTab.classList.add('text-orange-500', 'border-orange-500');
                     registerTab.classList.remove('text-slate-500', 'dark:text-slate-400');
                     loginTab.classList.add('text-slate-500', 'dark:text-slate-400');
                     loginTab.classList.remove('text-orange-500', 'border-orange-500');
                     showStep('1');
                 });
+                
+                // Inicializar estados de visibilidade
+                loginForm.setAttribute('aria-hidden', 'false');
+            }
             }
             
             // === 2. Navegação Multi-Step com transição slide ===
@@ -542,18 +573,19 @@
                     updateProgressDots(currentStep);
                 }
                 
-                nextToStep2.addEventListener('click', () => {
-                    if (validateStep('1')) {
+                nextToStep2.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    if (window.validateFormOnSubmit && window.validateFormOnSubmit(document.getElementById('step-1').querySelector('form'), '1')) {
                         showStep('2');
                     }
                 });
                 
                 backToStep1.addEventListener('click', () => showStep('1'));
                 
-                nextToStep3.addEventListener('click', () => {
-                    if (validateStep('2')) {
-                        showStep('3');
-                    }
+                nextToStep3.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    // Validação do Passo 2 será implementada conforme necessário
+                    showStep('3');
                 });
                 
                 backToStep2.addEventListener('click', () => showStep('2'));
@@ -562,7 +594,7 @@
                 updateProgressDots(1);
             }
             
-            // === 3. Validação de Campos ===
+            // === 3. Validação de Campos (apenas no submit) ===
             function setupFieldValidation() {
                 function showError(input, messageElement) {
                     input.classList.add('border-red-500');
@@ -571,108 +603,126 @@
                     input.classList.add('shake');
                     setTimeout(() => input.classList.remove('shake'), 400);
                 }
-                
+
                 function hideError(input, messageElement) {
                     input.classList.remove('border-red-500');
                     input.classList.add('border-slate-300', 'dark:border-slate-600');
                     messageElement.classList.remove('visible');
                 }
-                
-                function validateField(input, messageElement, validationFn) {
-                    const errorMessage = messageElement;
-                    
-                    input.addEventListener('blur', () => {
-                        if (!validationFn(input.value)) {
-                            showError(input, errorMessage);
-                        }
-                    });
-                    
+
+                // Limpar erro ao começar a digitar novamente (após erro ter sido mostrado)
+                function clearErrorOnInput(input, messageElement) {
                     input.addEventListener('input', () => {
-                        if (validationFn(input.value)) {
-                            hideError(input, errorMessage);
+                        if (input.classList.contains('border-red-500')) {
+                            hideError(input, messageElement);
                         }
                     });
                 }
-                
-                // Validar campos do login
+
+                // Validar campos do login - apenas limpa erro no input
                 const loginEmail = document.getElementById('login-email');
                 const loginPassword = document.getElementById('login-password');
                 const loginErrors = loginForm.querySelectorAll('.error-message');
-                
-                validateField(loginEmail, loginErrors[0], (val) => val.includes('@') && val.length > 5);
-                validateField(loginPassword, loginErrors[1], (val) => val.length >= 6);
-                
-                // Validar campos do registro
+
+                clearErrorOnInput(loginEmail, loginErrors[0]);
+                clearErrorOnInput(loginPassword, loginErrors[1]);
+
+                // Validar campos do registro - apenas limpa erro no input
                 const fields = [
                     {
                         input: document.getElementById('register-owner-name'),
-                        message: document.querySelectorAll('#step-1 .error-message')[0],
-                        validate: (val) => val.length >= 6
+                        message: document.querySelectorAll('#step-1 .error-message')[0]
                     },
                     {
                         input: document.getElementById('register-email'),
-                        message: document.querySelectorAll('#step-1 .error-message')[1],
-                        validate: (val) => val.includes('@') && val.length > 5
+                        message: document.querySelectorAll('#step-1 .error-message')[1]
                     },
                     {
                         input: document.getElementById('register-password'),
-                        message: document.querySelectorAll('#step-1 .error-message')[2],
-                        validate: (val) => /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/.test(val)
+                        message: document.querySelectorAll('#step-1 .error-message')[2]
                     },
                     {
                         input: document.getElementById('register-confirm-password'),
-                        message: document.getElementById('confirm-password-error'),
-                        validate: (val) => val === passwordInput.value && val.length > 0
+                        message: document.getElementById('confirm-password-error')
                     },
                     {
                         input: document.getElementById('register-id-number'),
-                        message: document.querySelectorAll('#step-1 .error-message')[4],
-                        validate: (val) => /^[a-zA-Z0-9]+$/.test(val) && val.length > 0
+                        message: document.querySelectorAll('#step-1 .error-message')[4]
                     }
                 ];
-                
+
                 fields.forEach(field => {
-                    validateField(field.input, field.message, field.validate);
+                    clearErrorOnInput(field.input, field.message);
                 });
-                
-                // Validação em tempo real da confirmação de senha
+
+                // Validação em tempo real da confirmação de senha (apenas para limpar erro)
                 passwordInput.addEventListener('input', () => {
-                    if (confirmPasswordInput.value.length > 0) {
-                        if (confirmPasswordInput.value !== passwordInput.value) {
-                            showError(confirmPasswordInput, confirmPasswordError);
-                        } else {
+                    if (confirmPasswordInput.value.length > 0 && confirmPasswordInput.classList.contains('border-red-500')) {
+                        if (confirmPasswordInput.value === passwordInput.value) {
                             hideError(confirmPasswordInput, confirmPasswordError);
                         }
                     }
                 });
+
+                // Função de validação no submit (exposta globalmente)
+                window.validateFormOnSubmit = function(formElement, stepNumber = null) {
+                    let isValid = true;
+                    const inputsToValidate = [];
+
+                    if (formElement.id === 'login-form' || formElement.querySelector('#login-email')) {
+                        // Validação do Login
+                        inputsToValidate.push({
+                            input: loginEmail,
+                            message: loginErrors[0],
+                            validate: (val) => val.includes('@') && val.length > 5
+                        });
+                        inputsToValidate.push({
+                            input: loginPassword,
+                            message: loginErrors[1],
+                            validate: (val) => val.length >= 6
+                        });
+                    } else if (stepNumber === '1' || formElement.querySelector('#register-owner-name')) {
+                        // Validação do Passo 1 do Registro
+                        inputsToValidate.push({
+                            input: document.getElementById('register-owner-name'),
+                            message: document.querySelectorAll('#step-1 .error-message')[0],
+                            validate: (val) => val.length >= 6
+                        });
+                        inputsToValidate.push({
+                            input: document.getElementById('register-email'),
+                            message: document.querySelectorAll('#step-1 .error-message')[1],
+                            validate: (val) => val.includes('@') && val.length > 5
+                        });
+                        inputsToValidate.push({
+                            input: document.getElementById('register-password'),
+                            message: document.querySelectorAll('#step-1 .error-message')[2],
+                            validate: (val) => /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/.test(val)
+                        });
+                        inputsToValidate.push({
+                            input: document.getElementById('register-confirm-password'),
+                            message: document.getElementById('confirm-password-error'),
+                            validate: (val) => val === passwordInput.value && val.length > 0
+                        });
+                        inputsToValidate.push({
+                            input: document.getElementById('register-id-number'),
+                            message: document.querySelectorAll('#step-1 .error-message')[4],
+                            validate: (val) => /^[a-zA-Z0-9]+$/.test(val) && val.length > 0
+                        });
+                    }
+
+                    // Validar cada campo
+                    inputsToValidate.forEach(field => {
+                        if (!field.validate(field.input.value)) {
+                            showError(field.input, field.message);
+                            isValid = false;
+                        }
+                    });
+
+                    return isValid;
+                };
             }
-            
             // === 4. Validação por Step ===
-            function validateStep(stepNumber) {
-                const step = steps[stepNumber];
-                const inputs = step.form.querySelectorAll('input, select');
-                let isValid = true;
-                
-                inputs.forEach(input => {
-                    if (input.hasAttribute('required') && !input.value) {
-                        isValid = false;
-                        const errorMessage = input.parentElement.querySelector('.error-message');
-                        if (errorMessage) {
-                            showError(input, errorMessage);
-                        }
-                    }
-                    
-                    if (input.type === 'email' && input.value && !input.value.includes('@')) {
-                        isValid = false;
-                        const errorMessage = input.parentElement.querySelector('.error-message');
-                        if (errorMessage) {
-                            showError(input, errorMessage);
-                        }
-                    }
-                });
-                
-                return isValid;
-            }
+            // Removida função validateStep antiga - agora usamos validateFormOnSubmit
             
             function showError(input, messageElement) {
                 input.classList.add('border-red-500');
