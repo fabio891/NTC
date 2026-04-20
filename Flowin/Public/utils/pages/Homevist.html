@@ -20,6 +20,91 @@
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
+        
+        /* Animação 1: Contador */
+        @keyframes countUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .counter-animate {
+            animation: countUp 1.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+        
+        /* Animação 2: Sparkline */
+        .sparkline-path {
+            stroke-dasharray: 100;
+            stroke-dashoffset: 100;
+            animation: drawLine 2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+            animation-delay: 0.3s;
+        }
+        @keyframes drawLine {
+            to { stroke-dashoffset: 0; }
+        }
+        
+        /* Animação 3: Barra de Progresso */
+        .progress-bar {
+            transform-origin: left;
+            transform: scaleX(0);
+            animation: growBar 1.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+            animation-delay: 0.8s;
+        }
+        @keyframes growBar {
+            to { transform: scaleX(1); }
+        }
+        
+        /* Animação 4: Barras do Gráfico (Automação) */
+        .bar-chart-rect {
+            transform-origin: bottom;
+            transform: scaleY(0);
+            animation: growBarChart 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+        .bar-chart-rect:nth-child(1) { animation-delay: 0.1s; }
+        .bar-chart-rect:nth-child(2) { animation-delay: 0.2s; }
+        .bar-chart-rect:nth-child(3) { animation-delay: 0.3s; }
+        .bar-chart-rect:nth-child(4) { animation-delay: 0.4s; }
+        @keyframes growBarChart {
+            to { transform: scaleY(1); }
+        }
+        
+        /* Animação 5: Brilho WhatsApp */
+        .shine-effect {
+            fill: url(#shineGradient);
+            animation: shineMove 2s ease-in-out infinite;
+        }
+        @keyframes shineMove {
+            0%, 100% { transform: translateX(-100%); }
+            50% { transform: translateX(100%); }
+        }
+        
+        /* Animação 6: Check WhatsApp */
+        .check-mark {
+            stroke-dasharray: 20;
+            stroke-dashoffset: 20;
+            animation: drawCheck 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+            animation-delay: 2.2s;
+        }
+        @keyframes drawCheck {
+            to { stroke-dashoffset: 0; }
+        }
+        
+        /* Animação 7: Onda Fundo Azul */
+        .wave-path {
+            animation: waveMorph 8s ease-in-out infinite;
+        }
+        @keyframes waveMorph {
+            0%, 100% { d: path("M0,50 Q25,40 50,50 T100,50 L100,100 L0,100 Z"); }
+            25% { d: path("M0,50 Q25,60 50,50 T100,50 L100,100 L0,100 Z"); }
+            50% { d: path("M0,50 Q25,45 50,55 T100,45 L100,100 L0,100 Z"); }
+            75% { d: path("M0,50 Q25,55 50,45 T100,55 L100,100 L0,100 Z"); }
+        }
+        
+        /* Hover effects */
+        .feature-card:hover .icon-container {
+            transform: scale(1.1);
+        }
+        .icon-container {
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
     </style>
 </head>
 <body class="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 antialiased">
@@ -92,18 +177,21 @@
                         </div>
                     </div>
                     <div class="hidden lg:block bg-slate-50 dark:bg-slate-800/50 p-6 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 transform hover:scale-105 transition-transform duration-300">
-                         <div class="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-md">
+                         <div class="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-md counter-animate">
                             <div class="flex justify-between items-center">
                                 <div>
                                     <p class="text-sm text-slate-500 dark:text-slate-400">Vendas Hoje</p>
-                                    <p class="text-2xl font-bold text-slate-900 dark:text-white">Kz 128.450</p>
+                                    <p class="text-2xl font-bold text-slate-900 dark:text-white" id="sales-counter">Kz 0</p>
                                 </div>
-                                <div class="bg-green-100 dark:bg-green-900/50 text-green-600 dark:text-green-400 p-3 rounded-full cursor-pointer hover:bg-green-200 dark:hover:bg-green-800/50 transition-colors">
-                                    <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" /></svg>
+                                <div class="bg-green-100 dark:bg-green-900/50 text-green-600 dark:text-green-400 p-3 rounded-full cursor-pointer hover:bg-green-200 dark:hover:bg-green-800/50 transition-colors icon-container">
+                                    <!-- SVG Animado: Gráfico Sparkline -->
+                                    <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path class="sparkline-path" d="M3 17L9 11L13 15L21 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
                                 </div>
                             </div>
                             <div class="mt-4 h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
-                                <div class="h-full bg-gradient-to-r from-green-400 to-emerald-500" style="width: 75%"></div>
+                                <div class="h-full bg-gradient-to-r from-green-400 to-emerald-500 progress-bar" style="width: 75%"></div>
                             </div>
                          </div>
                     </div>
@@ -120,26 +208,55 @@
                 </div>
                 <div class="mt-16 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
                     <!-- Feature Card -->
-                    <div class="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-md text-center">
-                        <div class="mx-auto bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-400 w-12 h-12 rounded-lg flex items-center justify-center"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12v2.5"/><path d="M12 6.5V9"/><path d="M12 15a2.5 2.5 0 0 0 5 0V9a2.5 2.5 0 0 0-5 0Z"/><path d="M12 9a2.5 2.5 0 0 0-5 0v6a2.5 2.5 0 0 0 5 0Z"/><path d="M7 15a2.5 2.5 0 0 0 5 0v-6a2.5 2.5 0 0 0-5 0Z"/><path d="M17 9a2.5 2.5 0 0 0-5 0v6a2.5 2.5 0 0 0 5 0Z"/></svg></div>
+                    <div class="feature-card bg-white dark:bg-slate-800 p-6 rounded-xl shadow-md text-center">
+                        <div class="icon-container mx-auto bg-orange-100 dark:bg-orange-900/50 text-orange-600 dark:text-orange-400 w-12 h-12 rounded-lg flex items-center justify-center">
+                            <!-- SVG Animado: Automação Inteligente (Gráfico de Barras) -->
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect class="bar-chart-rect" x="3" y="10" width="4" height="10" rx="1"/>
+                                <rect class="bar-chart-rect" x="9" y="6" width="4" height="14" rx="1"/>
+                                <rect class="bar-chart-rect" x="15" y="8" width="4" height="12" rx="1"/>
+                                <rect class="bar-chart-rect" x="21" y="4" width="4" height="16" rx="1" fill="#f97316" stroke="#f97316"/>
+                            </svg>
+                        </div>
                         <h3 class="mt-4 text-lg font-semibold text-slate-800 dark:text-slate-100">Automação Inteligente</h3>
                         <p class="mt-2 text-sm text-slate-600 dark:text-slate-400">A IA faz o balanço diário, semanal e mensal, entregando os relatórios prontos no WhatsApp.</p>
                     </div>
                     <!-- Feature Card -->
-                    <div class="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-md text-center">
-                        <div class="mx-auto bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 w-12 h-12 rounded-lg flex items-center justify-center"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg></div>
+                    <div class="feature-card bg-white dark:bg-slate-800 p-6 rounded-xl shadow-md text-center">
+                        <div class="icon-container mx-auto bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 w-12 h-12 rounded-lg flex items-center justify-center">
+                            <!-- SVG Animado: Relatórios WhatsApp -->
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <defs>
+                                    <linearGradient id="shineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                        <stop offset="0%" stop-color="rgba(255,255,255,0)"/>
+                                        <stop offset="50%" stop-color="rgba(255,255,255,0.4)"/>
+                                        <stop offset="100%" stop-color="rgba(255,255,255,0)"/>
+                                    </linearGradient>
+                                </defs>
+                                <rect x="5" y="2" width="14" height="20" rx="2"/>
+                                <path d="M12 18h.01"/>
+                                <!-- Brilho animado -->
+                                <rect class="shine-effect" x="5" y="2" width="14" height="20" rx="2" opacity="0.3"/>
+                                <!-- Check mark animado -->
+                                <path class="check-mark" d="M9 12l2 2 4-4" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                            </svg>
+                        </div>
                         <h3 class="mt-4 text-lg font-semibold text-slate-800 dark:text-slate-100">Zero Complicações</h3>
                         <p class="mt-2 text-sm text-slate-600 dark:text-slate-400">Relatórios claros via WhatsApp, sem a necessidade de planilhas, simples e intuitivos.</p>
                     </div>
                     <!-- Feature Card -->
-                    <div class="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-md text-center">
-                        <div class="mx-auto bg-green-100 dark:bg-green-900/50 text-green-600 dark:text-green-400 w-12 h-12 rounded-lg flex items-center justify-center"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></div>
+                    <div class="feature-card bg-white dark:bg-slate-800 p-6 rounded-xl shadow-md text-center">
+                        <div class="icon-container mx-auto bg-green-100 dark:bg-green-900/50 text-green-600 dark:text-green-400 w-12 h-12 rounded-lg flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+                        </div>
                         <h3 class="mt-4 text-lg font-semibold text-slate-800 dark:text-slate-100">Gestão Completa</h3>
                         <p class="mt-2 text-sm text-slate-600 dark:text-slate-400">Controle de clientes, produtos, vendas e despesas, tudo num só lugar. Tudo integrado.</p>
                     </div>
                      <!-- Feature Card -->
-                    <div class="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-md text-center">
-                        <div class="mx-auto bg-purple-100 dark:bg-purple-900/50 text-purple-600 dark:text-purple-400 w-12 h-12 rounded-lg flex items-center justify-center"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="m21.64 14.2-1.32-2.43a1.53 1.53 0 0 0-2.62.08l-1.32 2.43a1.53 1.53 0 0 0 1.31 2.22H20.3a1.53 1.53 0 0 0 1.34-2.22z"/></svg></div>
+                    <div class="feature-card bg-white dark:bg-slate-800 p-6 rounded-xl shadow-md text-center">
+                        <div class="icon-container mx-auto bg-purple-100 dark:bg-purple-900/50 text-purple-600 dark:text-purple-400 w-12 h-12 rounded-lg flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="m21.64 14.2-1.32-2.43a1.53 1.53 0 0 0-2.62.08l-1.32 2.43a1.53 1.53 0 0 0 1.31 2.22H20.3a1.53 1.53 0 0 0 1.34-2.22z"/></svg>
+                        </div>
                         <h3 class="mt-4 text-lg font-semibold text-slate-800 dark:text-slate-100">Escalabilidade Total</h3>
                         <p class="mt-2 text-sm text-slate-600 dark:text-slate-400">Do micro ao grande comércio. O sistema cresce e se adapta às suas necessidades.</p>
                     </div>
@@ -177,9 +294,14 @@
                             </li>
                         </ul>
                     </div>
-                    <div class="bg-blue-600 p-8 rounded-2xl shadow-2xl text-white">
-                        <h4 class="text-xl font-bold">Análise Inteligente</h4>
-                        <div class="mt-6 space-y-4">
+                    <div class="relative bg-blue-600 p-8 rounded-2xl shadow-2xl text-white overflow-hidden">
+                        <!-- Fundo Animado: Onda Vetorial -->
+                        <svg class="absolute inset-0 w-full h-full opacity-10" viewBox="0 0 100 100" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+                            <path class="wave-path" fill="#ffffff" opacity="0.1"/>
+                        </svg>
+                        
+                        <h4 class="text-xl font-bold relative z-10">Análise Inteligente</h4>
+                        <div class="mt-6 space-y-4 relative z-10">
                             <div class="flex justify-between items-center bg-blue-700/50 p-3 rounded-lg">
                                 <p>Vendas do Mês</p>
                                 <p class="font-bold text-green-400">+ 23%</p>
@@ -337,6 +459,61 @@
             link.addEventListener('click', () => {
                 mobileMenu.classList.add('hidden');
             });
+        });
+        
+        // Animação do Contador de Vendas (Hero Section)
+        function animateCounter(elementId, targetValue, duration = 1500) {
+            const element = document.getElementById(elementId);
+            if (!element) return;
+            
+            const startValue = 0;
+            const startTime = performance.now();
+            
+            function updateCounter(currentTime) {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                
+                // Easing function: cubic-bezier(0.4, 0, 0.2, 1)
+                const easeOutQuart = 1 - Math.pow(1 - progress, 4);
+                
+                const currentValue = Math.floor(startValue + (targetValue - startValue) * easeOutQuart);
+                element.textContent = 'Kz ' + currentValue.toLocaleString('pt-AO');
+                
+                if (progress < 1) {
+                    requestAnimationFrame(updateCounter);
+                } else {
+                    element.textContent = 'Kz ' + targetValue.toLocaleString('pt-AO');
+                }
+            }
+            
+            requestAnimationFrame(updateCounter);
+        }
+        
+        // Iniciar animação quando a página carregar
+        window.addEventListener('load', () => {
+            // Animar contador de vendas (valor alvo: 128.450)
+            setTimeout(() => {
+                animateCounter('sales-counter', 128450, 2000);
+            }, 500);
+        });
+        
+        // Intersection Observer para animações on-scroll
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px'
+        };
+        
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.animationPlayState = 'running';
+                }
+            });
+        }, observerOptions);
+        
+        // Observar elementos animados
+        document.querySelectorAll('.bar-chart-rect, .sparkline-path, .progress-bar, .shine-effect, .check-mark, .wave-path').forEach(el => {
+            observer.observe(el);
         });
     </script>
 
