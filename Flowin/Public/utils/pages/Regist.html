@@ -10,6 +10,172 @@
         body {
             font-family: 'Inter', sans-serif;
         }
+        
+        /* Animação da Logo - Stroke Dashoffset */
+        .logo-path {
+            stroke-dasharray: 100;
+            stroke-dashoffset: 100;
+            animation: drawLogo 1.2s ease-out forwards;
+        }
+        
+        @keyframes drawLogo {
+            to {
+                stroke-dashoffset: 0;
+            }
+        }
+        
+        /* Fade-in + Slide-up para texto */
+        .fade-in-up {
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeInUp 0.6s ease-out forwards;
+        }
+        
+        .fade-in-up-delayed {
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeInUp 0.6s ease-out 0.3s forwards;
+        }
+        
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        /* Transição suave entre Login/Registro */
+        .auth-forms-container {
+            display: flex;
+            overflow: hidden;
+            transition: transform 0.4s cubic-bezier(0.2, 0, 0, 1);
+        }
+        
+        .auth-form-wrapper {
+            min-width: 100%;
+            transition: opacity 0.3s ease;
+        }
+        
+        /* Multi-step com transição slide */
+        .multi-step-container {
+            display: flex;
+            overflow: hidden;
+            transition: transform 0.4s cubic-bezier(0.2, 0, 0, 1);
+        }
+        
+        .step-wrapper {
+            min-width: 100%;
+        }
+        
+        /* Dots de progresso com pulsação */
+        .progress-dot {
+            transition: all 0.3s ease;
+        }
+        
+        .progress-dot.active {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.2);
+            }
+        }
+        
+        /* Animação Shake para erros */
+        .shake {
+            animation: shake 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+            20%, 40%, 60%, 80% { transform: translateX(4px); }
+        }
+        
+        /* Zona de Drag & Drop */
+        .upload-zone {
+            border: 2px dashed #cbd5e1;
+            transition: all 0.2s ease;
+        }
+        
+        .upload-zone.drag-over {
+            border-color: #f97316;
+            box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.2);
+            transform: scale(1.02);
+        }
+        
+        .upload-zone.valid {
+            border-color: #10b981;
+            border-style: solid;
+        }
+        
+        .upload-zone.error {
+            border-color: #ef4444;
+        }
+        
+        /* Mensagens de erro com fade-in */
+        .error-message {
+            opacity: 0;
+            max-height: 0;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .error-message.visible {
+            opacity: 1;
+            max-height: 40px;
+        }
+        
+        /* Modal transitions */
+        .modal-backdrop {
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        
+        .modal-backdrop.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        
+        .modal-content {
+            transform: translateY(16px);
+            transition: transform 0.3s ease-out;
+        }
+        
+        .modal-backdrop.active .modal-content {
+            transform: translateY(0);
+        }
+        
+        /* Micro-interações */
+        .btn-primary-hover {
+            transition: box-shadow 0.2s ease;
+        }
+        
+        .btn-primary-hover:hover {
+            box-shadow: 0 10px 15px -3px rgba(249, 115, 22, 0.2);
+        }
+        
+        .input-focus-ring:focus {
+            box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.5);
+        }
+        
+        /* Ícone de check animado */
+        .check-icon path {
+            stroke-dasharray: 20;
+            stroke-dashoffset: 20;
+            animation: drawCheck 0.4s ease-out 0.2s forwards;
+        }
+        
+        @keyframes drawCheck {
+            to {
+                stroke-dashoffset: 0;
+            }
+        }
     </style>
 </head>
 <body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200 antialiased">
@@ -45,154 +211,212 @@
                     </a>
                 </div>
                 <!-- Auth Card -->
-                <div class="w-full bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-6 sm:p-8 border border-slate-200 dark:border-slate-700">
+                <div class="w-full bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-6 sm:p-8 border border-slate-200 dark:border-slate-700 overflow-hidden">
                     <!-- Tabs -->
-                    <div class="flex border-b border-slate-200 dark:border-slate-700">
-                        <button id="login-tab" class="flex-1 py-3 text-sm font-semibold text-orange-500 border-b-2 border-orange-500 focus:outline-none">Entrar</button>
-                        <button id="register-tab" class="flex-1 py-3 text-sm font-semibold text-slate-500 dark:text-slate-400 focus:outline-none">Registar</button>
+                    <div class="flex border-b border-slate-200 dark:border-slate-700 mb-6">
+                        <button id="login-tab" class="flex-1 py-3 text-sm font-semibold text-orange-500 border-b-2 border-orange-500 focus:outline-none transition-colors">Entrar</button>
+                        <button id="register-tab" class="flex-1 py-3 text-sm font-semibold text-slate-500 dark:text-slate-400 focus:outline-none transition-colors">Registar</button>
                     </div>
 
-                    <!-- Login Form -->
-                    <div id="login-form" class="">
-                        <form class="mt-6 space-y-5">
-                            <div>
-                                <label for="login-email" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Email ou Telemóvel</label>
-                                <div class="mt-1">
-                                    <input id="login-email" name="email" type="email" autocomplete="email" required class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-orange-500 focus:border-orange-500 sm:text-sm bg-white dark:bg-slate-800">
-                                </div>
-                            </div>
-                            <div>
-                                <label for="login-password" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Palavra-passe</label>
-                                <div class="mt-1">
-                                    <input id="login-password" name="password" type="password" autocomplete="current-password" required class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-orange-500 focus:border-orange-500 sm:text-sm bg-white dark:bg-slate-800">
-                                </div>
-                            </div>
-                            <div class="text-right text-sm">
-                                <a href="#" class="font-medium text-orange-600 hover:text-orange-500">Esqueceu a palavra-passe?</a>
-                            </div>
-                            <div>
-                                <button type="submit" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 dark:focus:ring-offset-slate-900">Entrar no Sistema</button>
-                            </div>
-                            <div class="relative flex py-2 items-center">
-                                <div class="flex-grow border-t border-slate-300 dark:border-slate-600"></div>
-                                <span class="flex-shrink mx-4 text-xs text-slate-500 dark:text-slate-400">OU</span>
-                                <div class="flex-grow border-t border-slate-300 dark:border-slate-600"></div>
-                            </div>
-                            <div>
-                                <button type="button" class="w-full flex justify-center items-center py-3 px-4 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm text-sm font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500">
-                                    <svg class="h-5 w-5 mr-2" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"></path><path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"></path><path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.223,0-9.657-3.356-11.303-8H2.394v8C6.396,40.62,14.493,44,24,44z"></path><path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.574l6.19,5.238C39.904,36.126,44,30.638,44,24C44,22.659,43.862,21.35,43.611,20.083z"></path></svg>
-                                    Entrar com o Google
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-
-                    <!-- Register Form (remains the same multi-step form) -->
-                    <div id="register-form" class="hidden">
-                        <!-- Step 1: Personal Data -->
-                        <div id="step-1">
-                            <form class="mt-6 space-y-4" novalidate>
-                                <div class="text-center mb-4">
-                                    <h3 class="text-xl font-bold text-slate-900 dark:text-white">Passo 1 de 3: Dados Pessoais</h3>
-                                </div>
-                                <!-- ... existing registration step 1 fields ... -->
+                    <!-- Forms Container com transição slide -->
+                    <div class="auth-forms-container" id="auth-forms-container">
+                        <!-- Login Form -->
+                        <div id="login-form" class="auth-form-wrapper">
+                            <form class="mt-6 space-y-5">
                                 <div>
-                                    <label for="register-owner-name" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Nome Completo</label>
-                                    <input id="register-owner-name" name="owner-name" type="text" autocomplete="name" required minlength="6" class="mt-1 w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm bg-white dark:bg-slate-800 focus:outline-none focus:ring-orange-500 focus:border-orange-500 peer">
-                                    <p class="mt-1 text-xs text-red-500 invisible peer-invalid:visible">Digite o seu nome completo (mínimo 6 caracteres).</p>
-                                </div>
-                                <div>
-                                    <label for="register-email" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Email</label>
-                                    <input id="register-email" name="email" type="email" autocomplete="email" required class="mt-1 w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm bg-white dark:bg-slate-800 focus:outline-none focus:ring-orange-500 focus:border-orange-500 peer">
-                                    <p class="mt-1 text-xs text-red-500 invisible peer-invalid:visible">Digite um endereço de email válido.</p>
-                                </div>
-                                <div>
-                                    <label for="register-password" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Palavra-passe</label>
-                                    <input id="register-password" name="password" type="password" required pattern="^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$" class="mt-1 w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm bg-white dark:bg-slate-800 focus:outline-none focus:ring-orange-500 focus:border-orange-500 peer">
-                                    <p class="mt-1 text-xs text-red-500 invisible peer-invalid:visible">A senha deve ter no mínimo 8 caracteres, com letras e números.</p>
-                                </div>
-                                <div>
-                                    <label for="register-confirm-password" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Confirmar Palavra-passe</label>
-                                    <input id="register-confirm-password" name="confirm-password" type="password" required class="mt-1 w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm bg-white dark:bg-slate-800 focus:outline-none focus:ring-orange-500 focus:border-orange-500 peer">
-                                    <p id="confirm-password-error" class="mt-1 text-xs text-red-500 invisible">As senhas não coincidem.</p>
-                                </div>
-                                <div>
-                                    <label for="register-id-number" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Nº de Identificação (BI)</label>
-                                    <input id="register-id-number" name="id-number" type="text" required pattern="^[a-zA-Z0-9]+$" class="mt-1 w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm bg-white dark:bg-slate-800 focus:outline-none focus:ring-orange-500 focus:border-orange-500 peer">
-                                    <p class="mt-1 text-xs text-red-500 invisible peer-invalid:visible">Por favor, insira um número de BI válido.</p>
-                                </div>
-                                <div class="space-y-2">
-                                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Carregar Documento de Identificação</label>
-                                    <div>
-                                        <label for="id-front" class="text-xs text-slate-500 dark:text-slate-400">Frente do Documento (PDF, JPG, PNG até 5MB)</label>
-                                        <input id="id-front" name="id-front" type="file" accept="application/pdf,image/jpeg,image/png" capture="environment" class="mt-1 w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100" required>
-                                        <img id="id-front-preview" class="hidden mt-2 h-24 w-auto rounded-md border border-slate-200 dark:border-slate-700"/>
+                                    <label for="login-email" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Email ou Telemóvel</label>
+                                    <div class="mt-1 relative">
+                                        <input id="login-email" name="email" type="email" autocomplete="email" required class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 sm:text-sm bg-white dark:bg-slate-800 input-focus-ring transition-all duration-150">
+                                        <p class="error-message mt-1 text-xs text-red-500">Digite um email válido.</p>
                                     </div>
-                                    <div>
-                                        <label for="id-back" class="text-xs text-slate-500 dark:text-slate-400">Verso do Documento (PDF, JPG, PNG até 5MB)</label>
-                                        <input id="id-back" name="id-back" type="file" accept="application/pdf,image/jpeg,image/png" capture="environment" class="mt-1 w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100" required>
-                                        <img id="id-back-preview" class="hidden mt-2 h-24 w-auto rounded-md border border-slate-200 dark:border-slate-700"/>
-                                    </div>
-                                    <p id="file-upload-error" class="mt-1 text-xs text-red-500 invisible">Formato ou tamanho inválido. Aceitamos PDF, JPG ou PNG até 5MB.</p>
                                 </div>
-                                <div class="pt-2">
-                                    <button type="button" id="next-to-step-2" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 disabled:bg-slate-400 dark:disabled:bg-slate-600" disabled>Continuar</button>
+                                <div>
+                                    <label for="login-password" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Palavra-passe</label>
+                                    <div class="mt-1 relative">
+                                        <input id="login-password" name="password" type="password" autocomplete="current-password" required class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 sm:text-sm bg-white dark:bg-slate-800 input-focus-ring transition-all duration-150">
+                                        <p class="error-message mt-1 text-xs text-red-500">Digite sua senha.</p>
+                                    </div>
+                                </div>
+                                <div class="text-right text-sm">
+                                    <a href="#" class="font-medium text-orange-600 hover:text-orange-500 transition-colors">Esqueceu a palavra-passe?</a>
+                                </div>
+                                <div>
+                                    <button type="submit" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 dark:focus:ring-offset-slate-900 btn-primary-hover transition-all duration-200">Entrar no Sistema</button>
+                                </div>
+                                <div class="relative flex py-2 items-center">
+                                    <div class="flex-grow border-t border-slate-300 dark:border-slate-600"></div>
+                                    <span class="flex-shrink mx-4 text-xs text-slate-500 dark:text-slate-400">OU</span>
+                                    <div class="flex-grow border-t border-slate-300 dark:border-slate-600"></div>
+                                </div>
+                                <div>
+                                    <button type="button" class="w-full flex justify-center items-center py-3 px-4 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm text-sm font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 btn-primary-hover transition-all duration-200">
+                                        <svg class="h-5 w-5 mr-2" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"></path><path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"></path><path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.223,0-9.657-3.356-11.303-8H2.394v8C6.396,40.62,14.493,44,24,44z"></path><path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.574l6.19,5.238C39.904,36.126,44,30.638,44,24C44,22.659,43.862,21.35,43.611,20.083z"></path></svg>
+                                        Entrar com o Google
+                                    </button>
                                 </div>
                             </form>
                         </div>
-                        <!-- Step 2: Company Data -->
-                        <div id="step-2" class="hidden">
-                             <form class="mt-6 space-y-4" novalidate>
-                                <div class="text-center mb-4">
-                                     <h3 class="text-xl font-bold text-slate-900 dark:text-white">Passo 2 de 3: Dados da Empresa</h3>
+
+                        <!-- Register Form -->
+                        <div id="register-form" class="auth-form-wrapper hidden">
+                            <!-- Progress Dots -->
+                            <div class="flex justify-center space-x-2 mb-6">
+                                <div class="progress-dot w-3 h-3 rounded-full bg-orange-500 active" data-step="1"></div>
+                                <div class="progress-dot w-3 h-3 rounded-full bg-slate-300 dark:bg-slate-600" data-step="2"></div>
+                                <div class="progress-dot w-3 h-3 rounded-full bg-slate-300 dark:bg-slate-600" data-step="3"></div>
+                            </div>
+                            
+                            <!-- Multi-step Container -->
+                            <div class="multi-step-container" id="multi-step-container">
+                                <!-- Step 1: Personal Data -->
+                                <div id="step-1" class="step-wrapper">
+                                    <form class="mt-6 space-y-4" novalidate>
+                                        <div class="text-center mb-4">
+                                            <h3 class="text-xl font-bold text-slate-900 dark:text-white fade-in-up">Passo 1 de 3: Dados Pessoais</h3>
+                                        </div>
+                                        <div>
+                                            <label for="register-owner-name" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Nome Completo</label>
+                                            <input id="register-owner-name" name="owner-name" type="text" autocomplete="name" required minlength="6" class="mt-1 w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 input-focus-ring transition-all duration-150">
+                                            <p class="error-message mt-1 text-xs text-red-500">Digite o seu nome completo (mínimo 6 caracteres).</p>
+                                        </div>
+                                        <div>
+                                            <label for="register-email" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Email</label>
+                                            <input id="register-email" name="email" type="email" autocomplete="email" required class="mt-1 w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 input-focus-ring transition-all duration-150">
+                                            <p class="error-message mt-1 text-xs text-red-500">Digite um endereço de email válido.</p>
+                                        </div>
+                                        <div>
+                                            <label for="register-password" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Palavra-passe</label>
+                                            <div class="relative">
+                                                <input id="register-password" name="password" type="password" required pattern="^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$" class="mt-1 w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 input-focus-ring transition-all duration-150">
+                                                <button type="button" class="absolute right-3 top-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 toggle-password" data-target="register-password">
+                                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                                                </button>
+                                            </div>
+                                            <p class="error-message mt-1 text-xs text-red-500">A senha deve ter no mínimo 8 caracteres, com letras e números.</p>
+                                        </div>
+                                        <div>
+                                            <label for="register-confirm-password" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Confirmar Palavra-passe</label>
+                                            <input id="register-confirm-password" name="confirm-password" type="password" required class="mt-1 w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 input-focus-ring transition-all duration-150">
+                                            <p id="confirm-password-error" class="error-message mt-1 text-xs text-red-500">As senhas não coincidem.</p>
+                                        </div>
+                                        <div>
+                                            <label for="register-id-number" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Nº de Identificação (BI)</label>
+                                            <input id="register-id-number" name="id-number" type="text" required pattern="^[a-zA-Z0-9]+$" class="mt-1 w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 input-focus-ring transition-all duration-150">
+                                            <p class="error-message mt-1 text-xs text-red-500">Por favor, insira um número de BI válido.</p>
+                                        </div>
+                                        <div class="space-y-3">
+                                            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Carregar Documento de Identificação</label>
+                                            <div>
+                                                <label class="text-xs text-slate-500 dark:text-slate-400 block mb-1">Frente do Documento</label>
+                                                <div class="upload-zone rounded-lg p-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50" id="upload-zone-front">
+                                                    <input id="id-front" name="id-front" type="file" accept="application/pdf,image/jpeg,image/png" capture="environment" class="hidden" required>
+                                                    <div class="text-center">
+                                                        <svg class="mx-auto h-12 w-12 text-slate-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                                                            <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                                                        </svg>
+                                                        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">PDF, JPG, PNG até 5MB</p>
+                                                        <p class="text-xs text-orange-500 font-medium mt-1">Clique para selecionar</p>
+                                                    </div>
+                                                    <div id="id-front-preview-container" class="hidden mt-3">
+                                                        <div class="flex items-center justify-between bg-green-50 dark:bg-green-900/20 p-2 rounded">
+                                                            <div class="flex items-center">
+                                                                <svg class="w-6 h-6 text-green-500 check-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none"/>
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12l3 3 5-5"/>
+                                                                </svg>
+                                                                <span class="ml-2 text-xs text-green-700 dark:text-green-400 truncate max-w-[200px]" id="id-front-filename"></span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label class="text-xs text-slate-500 dark:text-slate-400 block mb-1">Verso do Documento</label>
+                                                <div class="upload-zone rounded-lg p-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50" id="upload-zone-back">
+                                                    <input id="id-back" name="id-back" type="file" accept="application/pdf,image/jpeg,image/png" capture="environment" class="hidden" required>
+                                                    <div class="text-center">
+                                                        <svg class="mx-auto h-12 w-12 text-slate-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                                                            <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                                                        </svg>
+                                                        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">PDF, JPG, PNG até 5MB</p>
+                                                        <p class="text-xs text-orange-500 font-medium mt-1">Clique para selecionar</p>
+                                                    </div>
+                                                    <div id="id-back-preview-container" class="hidden mt-3">
+                                                        <div class="flex items-center justify-between bg-green-50 dark:bg-green-900/20 p-2 rounded">
+                                                            <div class="flex items-center">
+                                                                <svg class="w-6 h-6 text-green-500 check-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none"/>
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12l3 3 5-5"/>
+                                                                </svg>
+                                                                <span class="ml-2 text-xs text-green-700 dark:text-green-400 truncate max-w-[200px]" id="id-back-filename"></span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <p id="file-upload-error" class="error-message text-xs text-red-500">Formato ou tamanho inválido. Aceitamos PDF, JPG ou PNG até 5MB.</p>
+                                        </div>
+                                        <div class="pt-2">
+                                            <button type="button" id="next-to-step-2" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 disabled:bg-slate-400 dark:disabled:bg-slate-600 btn-primary-hover transition-all duration-200" disabled>Continuar</button>
+                                        </div>
+                                    </form>
                                 </div>
-                                <!-- ... existing registration step 2 fields ... -->
-                                <div>
-                                    <label for="register-company-name" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Nome da Empresa</label>
-                                    <input id="register-company-name" name="company-name" type="text" required minlength="3" class="mt-1 w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm bg-white dark:bg-slate-800 focus:outline-none focus:ring-orange-500 focus:border-orange-500 peer">
-                                    <p class="mt-1 text-xs text-red-500 invisible peer-invalid:visible">O nome da empresa deve ter no mínimo 3 caracteres.</p>
+                                
+                                <!-- Step 2: Company Data -->
+                                <div id="step-2" class="step-wrapper">
+                                     <form class="mt-6 space-y-4" novalidate>
+                                        <div class="text-center mb-4">
+                                             <h3 class="text-xl font-bold text-slate-900 dark:text-white">Passo 2 de 3: Dados da Empresa</h3>
+                                        </div>
+                                        <div>
+                                            <label for="register-company-name" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Nome da Empresa</label>
+                                            <input id="register-company-name" name="company-name" type="text" required minlength="3" class="mt-1 w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 input-focus-ring transition-all duration-150">
+                                            <p class="error-message mt-1 text-xs text-red-500">O nome da empresa deve ter no mínimo 3 caracteres.</p>
+                                        </div>
+                                        <div>
+                                            <label for="register-company-nif" class="block text-sm font-medium text-slate-700 dark:text-slate-300">NIF (Nº de Identificação Fiscal)</label>
+                                            <input id="register-company-nif" name="company-nif" type="text" required minlength="5" maxlength="14" class="mt-1 w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 input-focus-ring transition-all duration-150">
+                                            <p class="error-message mt-1 text-xs text-red-500">O NIF deve ter entre 5 e 14 caracteres.</p>
+                                        </div>
+                                        <div>
+                                            <label for="register-company-sector" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Sector de Atividade</label>
+                                            <select id="register-company-sector" name="company-sector" required class="mt-1 w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 input-focus-ring transition-all duration-150">
+                                                <option value="" disabled selected>Selecione um sector</option>
+                                                <option value="comercio">Comércio</option>
+                                                <option value="servicos">Serviços</option>
+                                                <option value="industria">Indústria</option>
+                                                <option value="outro">Outro</option>
+                                            </select>
+                                            <p class="error-message mt-1 text-xs text-red-500">Selecione o sector da empresa.</p>
+                                        </div>
+                                        <div class="flex items-center justify-between space-x-4 pt-2">
+                                            <button type="button" id="back-to-step-1" class="w-full flex justify-center py-3 px-4 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm text-sm font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600 focus:outline-none transition-all duration-200">Voltar</button>
+                                            <button type="button" id="next-to-step-3" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 focus:outline-none disabled:bg-slate-400 dark:disabled:bg-slate-600 btn-primary-hover transition-all duration-200" disabled>Continuar</button>
+                                        </div>
+                                    </form>
                                 </div>
-                                <div>
-                                    <label for="register-company-nif" class="block text-sm font-medium text-slate-700 dark:text-slate-300">NIF (Nº de Identificação Fiscal)</label>
-                                    <input id="register-company-nif" name="company-nif" type="text" required minlength="5" maxlength="14" class="mt-1 w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm bg-white dark:bg-slate-800 focus:outline-none focus:ring-orange-500 focus:border-orange-500 peer">
-                                    <p class="mt-1 text-xs text-red-500 invisible peer-invalid:visible">O NIF deve ter entre 5 e 14 caracteres.</p>
+                                
+                                <!-- Step 3: Consent -->
+                                <div id="step-3" class="step-wrapper">
+                                    <form class="mt-6 space-y-6" id="final-form">
+                                        <div class="text-center">
+                                            <h3 class="text-xl font-bold text-slate-900 dark:text-white">Passo 3 de 3: Consentimento</h3>
+                                        </div>
+                                        <div class="flex items-start p-4 bg-slate-100 dark:bg-slate-700/50 rounded-lg">
+                                            <div class="flex items-center h-5">
+                                                <input id="terms" name="terms" type="checkbox" required class="h-4 w-4 text-orange-600 focus:ring-orange-500 border-slate-300 dark:border-slate-500 rounded">
+                                            </div>
+                                            <div class="ml-3 text-sm">
+                                                <label for="terms" class="font-medium text-slate-700 dark:text-slate-300">Eu confirmo que os dados inseridos são verdadeiros e autorizo o seu processamento de acordo com a <button type="button" id="open-privacy-policy" class="text-orange-500 hover:underline font-semibold transition-colors">Política de Privacidade</button>.</label>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center justify-between space-x-4">
+                                            <button type="button" id="back-to-step-2" class="w-full flex justify-center py-3 px-4 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm text-sm font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600 focus:outline-none transition-all duration-200">Voltar</button>
+                                            <button type="submit" id="create-account-btn" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 focus:outline-none disabled:bg-slate-400 dark:disabled:bg-slate-600 btn-primary-hover transition-all duration-200" disabled>Criar Conta</button>
+                                        </div>
+                                    </form>
                                 </div>
-                                <div>
-                                    <label for="register-company-sector" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Sector de Atividade</label>
-                                    <select id="register-company-sector" name="company-sector" required class="mt-1 w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm bg-white dark:bg-slate-800 focus:outline-none focus:ring-orange-500 focus:border-orange-500 peer">
-                                        <option value="" disabled selected>Selecione um sector</option>
-                                        <option value="comercio">Comércio</option>
-                                        <option value="servicos">Serviços</option>
-                                        <option value="industria">Indústria</option>
-                                        <option value="outro">Outro</option>
-                                    </select>
-                                    <p class="mt-1 text-xs text-red-500 invisible peer-invalid:visible">Selecione o sector da empresa.</p>
-                                </div>
-                                <div class="flex items-center justify-between space-x-4 pt-2">
-                                    <button type="button" id="back-to-step-1" class="w-full flex justify-center py-3 px-4 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm text-sm font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600 focus:outline-none">Voltar</button>
-                                    <button type="button" id="next-to-step-3" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 focus:outline-none disabled:bg-slate-400 dark:disabled:bg-slate-600" disabled>Continuar</button>
-                                </div>
-                            </form>
-                        </div>
-                        <!-- Step 3: Consent -->
-                        <div id="step-3" class="hidden">
-                            <form class="mt-6 space-y-6" id="final-form">
-                                <div class="text-center">
-                                    <h3 class="text-xl font-bold text-slate-900 dark:text-white">Passo 3 de 3: Consentimento</h3>
-                                </div>
-                                <div class="flex items-start p-4 bg-slate-100 dark:bg-slate-700/50 rounded-lg">
-                                    <div class="flex items-center h-5">
-                                        <input id="terms" name="terms" type="checkbox" required class="h-4 w-4 text-orange-600 focus:ring-orange-500 border-slate-300 dark:border-slate-500 rounded">
-                                    </div>
-                                    <div class="ml-3 text-sm">
-                                        <label for="terms" class="font-medium text-slate-700 dark:text-slate-300">Eu confirmo que os dados inseridos são verdadeiros e autorizo o seu processamento de acordo com a <button type="button" id="open-privacy-policy" class="text-orange-500 hover:underline font-semibold">Política de Privacidade</button>.</label>
-                                    </div>
-                                </div>
-                                <div class="flex items-center justify-between space-x-4">
-                                    <button type="button" id="back-to-step-2" class="w-full flex justify-center py-3 px-4 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm text-sm font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600 focus:outline-none">Voltar</button>
-                                    <button type="submit" id="create-account-btn" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 focus:outline-none disabled:bg-slate-400 dark:disabled:bg-slate-600" disabled>Criar Conta</button>
-                                </div>
-                            </form>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -202,7 +426,8 @@
     
     <!-- Privacy Policy Modal -->
     <div id="privacy-policy-modal" class="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-4 hidden z-50">
-        <div class="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+        <div class="modal-backdrop absolute inset-0"></div>
+        <div class="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col modal-content relative z-10">
             <div class="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
                 <h3 class="text-lg font-bold text-slate-900 dark:text-white">Política de Privacidade</h3>
                 <button id="close-privacy-policy" class="text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white">&times;</button>
@@ -221,7 +446,7 @@
                 <p>O usuário se compromete a fazer uso adequado dos conteúdos e da informação que o FlowIn oferece no site e com caráter enunciativo, mas não limitativo: A) Não se envolver em atividades que sejam ilegais ou contrárias à boa fé e à ordem pública; B) Não difundir propaganda ou conteúdo de natureza racista, xenofóbica, ou sobre azar, qualquer tipo de pornografia ilegal, de apologia ao terrorismo ou contra os direitos humanos; C) Não causar danos aos sistemas físicos (hardwares) e lógicos (softwares) do FlowIn, de seus fornecedores ou terceiros, para introduzir ou disseminar vírus informáticos ou quaisquer outros sistemas de hardware ou software que sejam capazes de causar os danos anteriormente mencionados.</p>
             </div>
             <div class="p-4 border-t border-slate-200 dark:border-slate-700 text-right">
-                <button id="close-privacy-policy-footer" class="px-4 py-2 text-sm font-semibold text-white bg-orange-500 rounded-lg hover:bg-orange-600">Fechar</button>
+                <button id="close-privacy-policy-footer" class="px-4 py-2 text-sm font-semibold text-white bg-orange-500 rounded-lg hover:bg-orange-600 btn-primary-hover transition-all duration-200">Fechar</button>
             </div>
         </div>
     </div>
@@ -229,18 +454,23 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            // === Elementos DOM ===
             const loginTab = document.getElementById('login-tab');
             const registerTab = document.getElementById('register-tab');
+            const authFormsContainer = document.getElementById('auth-forms-container');
             const loginForm = document.getElementById('login-form');
             const registerForm = document.getElementById('register-form');
-
-            // Step containers and forms
+            
+            // Multi-step elements
+            const multiStepContainer = document.getElementById('multi-step-container');
             const steps = {
                 '1': { container: document.getElementById('step-1'), form: document.querySelector('#step-1 form') },
                 '2': { container: document.getElementById('step-2'), form: document.querySelector('#step-2 form') },
                 '3': { container: document.getElementById('step-3'), form: document.querySelector('#step-3 form') }
             };
-
+            
+            const progressDots = document.querySelectorAll('.progress-dot');
+            
             // Navigation buttons
             const nextToStep2 = document.getElementById('next-to-step-2');
             const backToStep1 = document.getElementById('back-to-step-1');
@@ -249,12 +479,12 @@
             const createAccountBtn = document.getElementById('create-account-btn');
             
             // File Uploads
+            const uploadZoneFront = document.getElementById('upload-zone-front');
+            const uploadZoneBack = document.getElementById('upload-zone-back');
             const idFrontInput = document.getElementById('id-front');
             const idBackInput = document.getElementById('id-back');
-            const idFrontPreview = document.getElementById('id-front-preview');
-            const idBackPreview = document.getElementById('id-back-preview');
             const fileUploadError = document.getElementById('file-upload-error');
-
+            
             // Password confirmation
             const passwordInput = document.getElementById('register-password');
             const confirmPasswordInput = document.getElementById('register-confirm-password');
@@ -264,143 +494,379 @@
             const modal = document.getElementById('privacy-policy-modal');
             const openModalBtn = document.getElementById('open-privacy-policy');
             const closeModalBtns = [document.getElementById('close-privacy-policy'), document.getElementById('close-privacy-policy-footer')];
-
-
-            const showStep = (stepToShow) => {
-                Object.values(steps).forEach(s => s.container.classList.add('hidden'));
-                steps[stepToShow].container.classList.remove('hidden');
-            };
-
-            loginTab.addEventListener('click', () => {
-                loginForm.classList.remove('hidden');
-                registerForm.classList.add('hidden');
-                loginTab.classList.add('text-orange-500', 'border-orange-500');
-                loginTab.classList.remove('text-slate-500', 'dark:text-slate-400');
-                registerTab.classList.add('text-slate-500', 'dark:text-slate-400');
-                registerTab.classList.remove('text-orange-500', 'border-orange-500');
-            });
-
-            registerTab.addEventListener('click', () => {
-                registerForm.classList.remove('hidden');
-                loginForm.classList.add('hidden');
-                registerTab.classList.add('text-orange-500', 'border-orange-500');
-                registerTab.classList.remove('text-slate-500', 'dark:text-slate-400');
-                loginTab.classList.add('text-slate-500', 'dark:text-slate-400');
-                loginTab.classList.remove('text-orange-500', 'border-orange-500');
-                showStep('1');
-            });
-
-            // --- Step Navigation ---
-            nextToStep2.addEventListener('click', () => showStep('2'));
-            backToStep1.addEventListener('click', () => showStep('1'));
-            nextToStep3.addEventListener('click', () => showStep('3'));
-            backToStep2.addEventListener('click', () => showStep('2'));
             
-            // --- Validation Logic ---
-            const checkPasswordsMatch = () => {
-                if (passwordInput.value !== confirmPasswordInput.value) {
-                    confirmPasswordError.classList.remove('invisible');
-                    confirmPasswordInput.setCustomValidity("Invalid");
-                } else {
-                    confirmPasswordError.classList.add('invisible');
-                    confirmPasswordInput.setCustomValidity("");
-                }
-            };
+            let currentStep = 1;
             
-            passwordInput.addEventListener('input', checkPasswordsMatch);
-            confirmPasswordInput.addEventListener('input', checkPasswordsMatch);
+            // === 1. Transição entre Login e Registro ===
+            function setupSlideTransitions() {
+                loginTab.addEventListener('click', () => {
+                    authFormsContainer.style.transform = 'translateX(0)';
+                    loginTab.classList.add('text-orange-500', 'border-orange-500');
+                    loginTab.classList.remove('text-slate-500', 'dark:text-slate-400');
+                    registerTab.classList.add('text-slate-500', 'dark:text-slate-400');
+                    registerTab.classList.remove('text-orange-500', 'border-orange-500');
+                });
+                
+                registerTab.addEventListener('click', () => {
+                    authFormsContainer.style.transform = 'translateX(-100%)';
+                    registerTab.classList.add('text-orange-500', 'border-orange-500');
+                    registerTab.classList.remove('text-slate-500', 'dark:text-slate-400');
+                    loginTab.classList.add('text-slate-500', 'dark:text-slate-400');
+                    loginTab.classList.remove('text-orange-500', 'border-orange-500');
+                    showStep('1');
+                });
+            }
             
-            const validateStep1 = () => {
-                checkPasswordsMatch();
-                const isFormValid = steps['1'].form.checkValidity();
-                nextToStep2.disabled = !isFormValid;
-            };
-            
-            const validateStep2 = () => {
-                nextToStep3.disabled = !steps['2'].form.checkValidity();
-            };
-
-            const validateStep3 = () => {
-                createAccountBtn.disabled = !steps['3'].form.checkValidity();
-            };
-            
-            steps['1'].form.addEventListener('input', validateStep1);
-            steps['2'].form.addEventListener('input', validateStep2);
-            steps['3'].form.addEventListener('input', validateStep3);
-            
-            // --- File Upload Handling ---
-            const handleFileUpload = (input, preview) => {
-                const file = input.files[0];
-                fileUploadError.classList.add('invisible');
-                preview.classList.add('hidden');
-
-                if (!file) {
-                    validateStep1();
-                    return;
-                }
-
-                const MAX_SIZE = 5 * 1024 * 1024; // 5MB
-                const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'application/pdf'];
-
-                if (file.size > MAX_SIZE || !ALLOWED_TYPES.includes(file.type)) {
-                    fileUploadError.classList.remove('invisible');
-                    input.value = ''; // Clear invalid file
-                    validateStep1();
-                    return;
+            // === 2. Navegação Multi-Step com transição slide ===
+            function setupMultiStepNavigation() {
+                function updateProgressDots(step) {
+                    progressDots.forEach(dot => {
+                        const dotStep = parseInt(dot.dataset.step);
+                        dot.classList.remove('bg-orange-500', 'active');
+                        dot.classList.add('bg-slate-300', 'dark:bg-slate-600');
+                        
+                        if (dotStep === step) {
+                            dot.classList.remove('bg-slate-300', 'dark:bg-slate-600');
+                            dot.classList.add('bg-orange-500', 'active');
+                        } else if (dotStep < step) {
+                            dot.classList.remove('bg-slate-300', 'dark:bg-slate-600');
+                            dot.classList.add('bg-orange-500');
+                        }
+                    });
                 }
                 
-                if (file.type.startsWith('image/')) {
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        preview.src = e.target.result;
-                        preview.classList.remove('hidden');
-                    };
-                    reader.readAsDataURL(file);
-                } else {
-                    preview.src = '';
-                    preview.classList.add('hidden');
+                function showStep(stepToShow) {
+                    currentStep = parseInt(stepToShow);
+                    const translateX = -(currentStep - 1) * 100;
+                    multiStepContainer.style.transform = `translateX(${translateX}%)`;
+                    updateProgressDots(currentStep);
                 }
                 
-                validateStep1();
-            };
-            
-            idFrontInput.addEventListener('change', () => handleFileUpload(idFrontInput, idFrontPreview));
-            idBackInput.addEventListener('change', () => handleFileUpload(idBackInput, idBackPreview));
-
-            // --- Privacy Policy Modal Logic ---
-            openModalBtn.addEventListener('click', () => modal.classList.remove('hidden'));
-            closeModalBtns.forEach(btn => btn.addEventListener('click', () => modal.classList.add('hidden')));
-
-            // --- Final Form Submission ---
-            steps['3'].form.addEventListener('submit', (e) => {
-                e.preventDefault();
-                console.log("Form submitted!");
-                // 1. Collect all data from step 1, 2, and 3 forms
-                const formData = new FormData();
-                const form1Data = new FormData(steps['1'].form);
-                const form2Data = new FormData(steps['2'].form);
-
-                for (const [key, value] of form1Data.entries()) {
-                    formData.append(key, value);
-                }
-                 for (const [key, value] of form2Data.entries()) {
-                    formData.append(key, value);
-                }
-
-                console.log("Creating user and company with the following data:");
-                for (const [key, value] of formData.entries()) {
-                    if (value instanceof File) {
-                         console.log(`${key}: ${value.name} (${value.size} bytes)`);
-                    } else {
-                         console.log(`${key}: ${value}`);
+                nextToStep2.addEventListener('click', () => {
+                    if (validateStep('1')) {
+                        showStep('2');
                     }
+                });
+                
+                backToStep1.addEventListener('click', () => showStep('1'));
+                
+                nextToStep3.addEventListener('click', () => {
+                    if (validateStep('2')) {
+                        showStep('3');
+                    }
+                });
+                
+                backToStep2.addEventListener('click', () => showStep('2'));
+                
+                // Initialize dots
+                updateProgressDots(1);
+            }
+            
+            // === 3. Validação de Campos ===
+            function setupFieldValidation() {
+                function showError(input, messageElement) {
+                    input.classList.add('border-red-500');
+                    input.classList.remove('border-slate-300', 'dark:border-slate-600');
+                    messageElement.classList.add('visible');
+                    input.classList.add('shake');
+                    setTimeout(() => input.classList.remove('shake'), 400);
                 }
-                // 2. Simulate API call
-                alert("Conta criada com sucesso! Por favor, faça o login para continuar.");
-                // 3. Redirect to login
-                window.location.href = '#'; // Or a real login page
-                loginTab.click(); // Simulate clicking the login tab
-            });
+                
+                function hideError(input, messageElement) {
+                    input.classList.remove('border-red-500');
+                    input.classList.add('border-slate-300', 'dark:border-slate-600');
+                    messageElement.classList.remove('visible');
+                }
+                
+                function validateField(input, messageElement, validationFn) {
+                    const errorMessage = messageElement;
+                    
+                    input.addEventListener('blur', () => {
+                        if (!validationFn(input.value)) {
+                            showError(input, errorMessage);
+                        }
+                    });
+                    
+                    input.addEventListener('input', () => {
+                        if (validationFn(input.value)) {
+                            hideError(input, errorMessage);
+                        }
+                    });
+                }
+                
+                // Validar campos do login
+                const loginEmail = document.getElementById('login-email');
+                const loginPassword = document.getElementById('login-password');
+                const loginErrors = loginForm.querySelectorAll('.error-message');
+                
+                validateField(loginEmail, loginErrors[0], (val) => val.includes('@') && val.length > 5);
+                validateField(loginPassword, loginErrors[1], (val) => val.length >= 6);
+                
+                // Validar campos do registro
+                const fields = [
+                    {
+                        input: document.getElementById('register-owner-name'),
+                        message: document.querySelectorAll('#step-1 .error-message')[0],
+                        validate: (val) => val.length >= 6
+                    },
+                    {
+                        input: document.getElementById('register-email'),
+                        message: document.querySelectorAll('#step-1 .error-message')[1],
+                        validate: (val) => val.includes('@') && val.length > 5
+                    },
+                    {
+                        input: document.getElementById('register-password'),
+                        message: document.querySelectorAll('#step-1 .error-message')[2],
+                        validate: (val) => /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/.test(val)
+                    },
+                    {
+                        input: document.getElementById('register-confirm-password'),
+                        message: document.getElementById('confirm-password-error'),
+                        validate: (val) => val === passwordInput.value && val.length > 0
+                    },
+                    {
+                        input: document.getElementById('register-id-number'),
+                        message: document.querySelectorAll('#step-1 .error-message')[4],
+                        validate: (val) => /^[a-zA-Z0-9]+$/.test(val) && val.length > 0
+                    }
+                ];
+                
+                fields.forEach(field => {
+                    validateField(field.input, field.message, field.validate);
+                });
+                
+                // Validação em tempo real da confirmação de senha
+                passwordInput.addEventListener('input', () => {
+                    if (confirmPasswordInput.value.length > 0) {
+                        if (confirmPasswordInput.value !== passwordInput.value) {
+                            showError(confirmPasswordInput, confirmPasswordError);
+                        } else {
+                            hideError(confirmPasswordInput, confirmPasswordError);
+                        }
+                    }
+                });
+            }
+            
+            // === 4. Validação por Step ===
+            function validateStep(stepNumber) {
+                const step = steps[stepNumber];
+                const inputs = step.form.querySelectorAll('input, select');
+                let isValid = true;
+                
+                inputs.forEach(input => {
+                    if (input.hasAttribute('required') && !input.value) {
+                        isValid = false;
+                        const errorMessage = input.parentElement.querySelector('.error-message');
+                        if (errorMessage) {
+                            showError(input, errorMessage);
+                        }
+                    }
+                    
+                    if (input.type === 'email' && input.value && !input.value.includes('@')) {
+                        isValid = false;
+                        const errorMessage = input.parentElement.querySelector('.error-message');
+                        if (errorMessage) {
+                            showError(input, errorMessage);
+                        }
+                    }
+                });
+                
+                return isValid;
+            }
+            
+            function showError(input, messageElement) {
+                input.classList.add('border-red-500');
+                input.classList.remove('border-slate-300', 'dark:border-slate-600');
+                messageElement.classList.add('visible');
+                input.classList.add('shake');
+                setTimeout(() => input.classList.remove('shake'), 400);
+            }
+            
+            // === 5. Drag & Drop Upload ===
+            function setupDragAndDrop() {
+                function handleZone(zone, input, previewContainer, filenameElement) {
+                    zone.addEventListener('click', () => input.click());
+                    
+                    zone.addEventListener('dragover', (e) => {
+                        e.preventDefault();
+                        zone.classList.add('drag-over');
+                    });
+                    
+                    zone.addEventListener('dragleave', () => {
+                        zone.classList.remove('drag-over');
+                    });
+                    
+                    zone.addEventListener('drop', (e) => {
+                        e.preventDefault();
+                        zone.classList.remove('drag-over');
+                        const files = e.dataTransfer.files;
+                        if (files.length > 0) {
+                            handleFile(files[0], input, previewContainer, filenameElement);
+                        }
+                    });
+                    
+                    input.addEventListener('change', () => {
+                        if (input.files.length > 0) {
+                            handleFile(input.files[0], input, previewContainer, filenameElement);
+                        }
+                    });
+                }
+                
+                function handleFile(file, input, previewContainer, filenameElement) {
+                    const MAX_SIZE = 5 * 1024 * 1024;
+                    const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'application/pdf'];
+                    
+                    if (file.size > MAX_SIZE || !ALLOWED_TYPES.includes(file.type)) {
+                        fileUploadError.classList.add('visible');
+                        input.value = '';
+                        return;
+                    }
+                    
+                    fileUploadError.classList.remove('visible');
+                    filenameElement.textContent = file.name;
+                    previewContainer.classList.remove('hidden');
+                    
+                    const zone = input.parentElement;
+                    zone.classList.add('valid');
+                    zone.classList.remove('error');
+                }
+                
+                handleZone(
+                    uploadZoneFront,
+                    idFrontInput,
+                    document.getElementById('id-front-preview-container'),
+                    document.getElementById('id-front-filename')
+                );
+                
+                handleZone(
+                    uploadZoneBack,
+                    idBackInput,
+                    document.getElementById('id-back-preview-container'),
+                    document.getElementById('id-back-filename')
+                );
+            }
+            
+            // === 6. Toggle Password Visibility ===
+            function setupPasswordToggle() {
+                document.querySelectorAll('.toggle-password').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const targetId = btn.dataset.target;
+                        const input = document.getElementById(targetId);
+                        const isPassword = input.type === 'password';
+                        input.type = isPassword ? 'text' : 'password';
+                        btn.classList.toggle('text-slate-600');
+                    });
+                });
+            }
+            
+            // === 7. Modal de Política de Privacidade ===
+            function setupModal() {
+                openModalBtn.addEventListener('click', () => {
+                    modal.classList.remove('hidden');
+                    setTimeout(() => {
+                        modal.querySelector('.modal-backdrop').classList.add('active');
+                    }, 10);
+                });
+                
+                closeModalBtns.forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        modal.querySelector('.modal-backdrop').classList.remove('active');
+                        setTimeout(() => {
+                            modal.classList.add('hidden');
+                        }, 300);
+                    });
+                });
+                
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) {
+                        modal.querySelector('.modal-backdrop').classList.remove('active');
+                        setTimeout(() => {
+                            modal.classList.add('hidden');
+                        }, 300);
+                    }
+                });
+            }
+            
+            // === 8. Validação contínua dos forms ===
+            function setupContinuousValidation() {
+                const validateStep1 = () => {
+                    const form = steps['1'].form;
+                    const inputs = form.querySelectorAll('input[required]');
+                    let allValid = true;
+                    
+                    inputs.forEach(input => {
+                        if (!input.value || (input.type === 'email' && !input.value.includes('@'))) {
+                            allValid = false;
+                        }
+                    });
+                    
+                    nextToStep2.disabled = !allValid;
+                };
+                
+                const validateStep2 = () => {
+                    const form = steps['2'].form;
+                    const inputs = form.querySelectorAll('input[required], select[required]');
+                    let allValid = true;
+                    
+                    inputs.forEach(input => {
+                        if (!input.value) {
+                            allValid = false;
+                        }
+                    });
+                    
+                    nextToStep3.disabled = !allValid;
+                };
+                
+                const validateStep3 = () => {
+                    const termsCheckbox = document.getElementById('terms');
+                    createAccountBtn.disabled = !termsCheckbox.checked;
+                };
+                
+                steps['1'].form.addEventListener('input', validateStep1);
+                steps['2'].form.addEventListener('input', validateStep2);
+                document.getElementById('terms').addEventListener('change', validateStep3);
+            }
+            
+            // === 9. Final Form Submission ===
+            function setupFormSubmission() {
+                steps['3'].form.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    console.log("Form submitted!");
+                    
+                    const formData = new FormData();
+                    const form1Data = new FormData(steps['1'].form);
+                    const form2Data = new FormData(steps['2'].form);
+                    
+                    for (const [key, value] of form1Data.entries()) {
+                        formData.append(key, value);
+                    }
+                    for (const [key, value] of form2Data.entries()) {
+                        formData.append(key, value);
+                    }
+                    
+                    console.log("Creating user and company with the following data:");
+                    for (const [key, value] of formData.entries()) {
+                        if (value instanceof File) {
+                            console.log(`${key}: ${value.name} (${value.size} bytes)`);
+                        } else {
+                            console.log(`${key}: ${value}`);
+                        }
+                    }
+                    
+                    alert("Conta criada com sucesso! Por favor, faça o login para continuar.");
+                    loginTab.click();
+                });
+            }
+            
+            // === Inicialização ===
+            setupSlideTransitions();
+            setupMultiStepNavigation();
+            setupFieldValidation();
+            setupDragAndDrop();
+            setupPasswordToggle();
+            setupModal();
+            setupContinuousValidation();
+            setupFormSubmission();
         });
     </script>
 </body>
