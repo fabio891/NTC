@@ -56,6 +56,11 @@
         .auth-form-wrapper {
             width: 100%;
             flex-shrink: 0;
+            visibility: visible !important;
+        }
+        
+        #register-form {
+            visibility: visible !important;
         }
         
         /* Multi-step com transição slide */
@@ -260,7 +265,7 @@
                         </div>
 
                         <!-- Register Form -->
-                        <div id="register-form" class="auth-form-wrapper" aria-hidden="true">
+                        <div id="register-form" class="auth-form-wrapper" aria-hidden="false">
                             <!-- Progress Dots -->
                             <div class="flex justify-center space-x-2 mb-6">
                                 <div class="progress-dot w-3 h-3 rounded-full bg-orange-500 active" data-step="1"></div>
@@ -504,9 +509,9 @@
                 loginTab.addEventListener('click', () => {
                     authFormsContainer.style.transform = 'translateX(0)';
                     
-                    // Tornar login visível imediatamente para acessibilidade
-                    loginForm.style.visibility = 'visible';
-                    registerForm.style.visibility = 'hidden';
+                    // Atualizar aria-hidden para acessibilidade
+                    loginForm.setAttribute('aria-hidden', 'false');
+                    registerForm.setAttribute('aria-hidden', 'true');
                     
                     loginTab.classList.add('text-orange-500', 'border-orange-500');
                     loginTab.classList.remove('text-slate-500', 'dark:text-slate-400');
@@ -520,9 +525,9 @@
                     // Forçar reflow para garantir renderização
                     void authFormsContainer.offsetHeight;
                     
-                    // Tornar registro visível imediatamente
-                    registerForm.style.visibility = 'visible';
-                    loginForm.style.visibility = 'hidden';
+                    // Atualizar aria-hidden para acessibilidade
+                    registerForm.setAttribute('aria-hidden', 'false');
+                    loginForm.setAttribute('aria-hidden', 'true');
                     
                     registerTab.classList.add('text-orange-500', 'border-orange-500');
                     registerTab.classList.remove('text-slate-500', 'dark:text-slate-400');
@@ -531,9 +536,9 @@
                     showStep('1');
                 });
                 
-                // Inicializar estados de visibilidade corretamente
-                loginForm.style.visibility = 'visible';
-                registerForm.style.visibility = 'hidden';
+                // Inicializar estados de aria-hidden corretamente
+                loginForm.setAttribute('aria-hidden', 'false');
+                registerForm.setAttribute('aria-hidden', 'true');
             }
             
             // === 2. Navegação Multi-Step com transição slide ===
