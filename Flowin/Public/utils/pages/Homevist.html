@@ -98,6 +98,19 @@
             75% { d: path("M0,50 Q25,55 50,45 T100,55 L100,100 L0,100 Z"); }
         }
         
+        /* Animação 8: Contadores Numéricos */
+        .counter-value {
+            display: inline-block;
+            transition: all 0.3s ease;
+        }
+        .counter-animate-start {
+            animation: pulseCount 0.5s ease-in-out;
+        }
+        @keyframes pulseCount {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        
         /* Hover effects */
         .feature-card:hover .icon-container {
             transform: scale(1.1);
@@ -255,7 +268,12 @@
                      <!-- Feature Card -->
                     <div class="feature-card bg-white dark:bg-slate-800 p-6 rounded-xl shadow-md text-center">
                         <div class="icon-container mx-auto bg-purple-100 dark:bg-purple-900/50 text-purple-600 dark:text-purple-400 w-12 h-12 rounded-lg flex items-center justify-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="m21.64 14.2-1.32-2.43a1.53 1.53 0 0 0-2.62.08l-1.32 2.43a1.53 1.53 0 0 0 1.31 2.22H20.3a1.53 1.53 0 0 0 1.34-2.22z"/></svg>
+                            <!-- Ícone de Escalabilidade: Gráfico de Barras Ascendentes -->
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="12" y1="20" x2="12" y2="10" class="bar-chart-rect"/>
+                                <line x1="18" y1="20" x2="18" y2="4" class="bar-chart-rect" style="animation-delay: 0.2s;"/>
+                                <line x1="6" y1="20" x2="6" y2="16" class="bar-chart-rect" style="animation-delay: 0.1s;"/>
+                            </svg>
                         </div>
                         <h3 class="mt-4 text-lg font-semibold text-slate-800 dark:text-slate-100">Escalabilidade Total</h3>
                         <p class="mt-2 text-sm text-slate-600 dark:text-slate-400">Do micro ao grande comércio. O sistema cresce e se adapta às suas necessidades.</p>
@@ -304,15 +322,15 @@
                         <div class="mt-6 space-y-4 relative z-10">
                             <div class="flex justify-between items-center bg-blue-700/50 p-3 rounded-lg">
                                 <p>Vendas do Mês</p>
-                                <p class="font-bold text-green-400">+ 23%</p>
+                                <p class="font-bold text-green-400"><span class="counter-value" data-target="23">0</span>%</p>
                             </div>
                              <div class="flex justify-between items-center bg-blue-700/50 p-3 rounded-lg">
                                 <p>Produtos em Falta</p>
-                                <p class="font-bold">3 Itens</p>
+                                <p class="font-bold"><span class="counter-value" data-target="3">0</span> Itens</p>
                             </div>
                              <div class="flex justify-between items-center bg-blue-700/50 p-3 rounded-lg">
                                 <p>Margem de Lucro</p>
-                                <p class="font-bold">29.5%</p>
+                                <p class="font-bold"><span class="counter-value" data-target="29.5">0</span>%</p>
                             </div>
                         </div>
                     </div>
@@ -497,6 +515,48 @@
             }, 500);
         });
         
+        // Função para animar contadores numéricos da seção "Análise Inteligente"
+        function animateAnalysisCounters() {
+            const counters = document.querySelectorAll('.counter-value');
+            
+            counters.forEach(counter => {
+                const target = parseFloat(counter.getAttribute('data-target'));
+                const duration = 2000; // 2 segundos
+                const startTime = performance.now();
+                const isDecimal = target % 1 !== 0;
+                
+                function updateCount(currentTime) {
+                    const elapsed = currentTime - startTime;
+                    const progress = Math.min(elapsed / duration, 1);
+                    
+                    // Easing function: ease-out
+                    const easeOut = 1 - Math.pow(1 - progress, 3);
+                    
+                    const currentValue = target * easeOut;
+                    
+                    if (isDecimal) {
+                        counter.textContent = currentValue.toFixed(1);
+                    } else {
+                        counter.textContent = Math.floor(currentValue);
+                    }
+                    
+                    if (progress < 1) {
+                        requestAnimationFrame(updateCount);
+                    } else {
+                        // Garantir valor final correto
+                        if (isDecimal) {
+                            counter.textContent = target.toFixed(1);
+                        } else {
+                            counter.textContent = target;
+                        }
+                        counter.classList.add('counter-animate-start');
+                    }
+                }
+                
+                requestAnimationFrame(updateCount);
+            });
+        }
+        
         // Intersection Observer para animações on-scroll
         const observerOptions = {
             threshold: 0.1,
@@ -507,6 +567,12 @@
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
                     entry.target.style.animationPlayState = 'running';
+                    
+                    // Se for a seção de análise inteligente, animar os contadores
+                    if (entry.target.closest('#funcionalidades') && !entry.target.dataset.animated) {
+                        entry.target.dataset.animated = 'true';
+                        animateAnalysisCounters();
+                    }
                 }
             });
         }, observerOptions);
@@ -515,6 +581,12 @@
         document.querySelectorAll('.bar-chart-rect, .sparkline-path, .progress-bar, .shine-effect, .check-mark, .wave-path').forEach(el => {
             observer.observe(el);
         });
+        
+        // Observar a seção de análise inteligente para ativar contadores
+        const analysisSection = document.querySelector('#funcionalidades');
+        if (analysisSection) {
+            observer.observe(analysisSection);
+        }
     </script>
 
 </body>
