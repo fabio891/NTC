@@ -118,6 +118,51 @@
         .icon-container {
             transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
+        
+        /* Animação 9: Flutuação dos Cards (Floating/Bobbing) */
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
+        }
+        .testimonial-card {
+            animation: float 5s ease-in-out infinite;
+        }
+        .testimonial-card:nth-child(1) { animation-delay: 0s; }
+        .testimonial-card:nth-child(2) { animation-delay: 0.5s; }
+        .testimonial-card:nth-child(3) { animation-delay: 1s; }
+        
+        /* Animação 10: Typewriter Effect */
+        .typewriter-text {
+            overflow: hidden;
+            border-right: 2px solid #f97316;
+            white-space: nowrap;
+            width: 0;
+            opacity: 0;
+        }
+        .typewriter-active {
+            width: 100%;
+            opacity: 1;
+            animation: typing 2.5s steps(40, end), blink-caret 0.75s step-end infinite;
+        }
+        @keyframes typing {
+            from { width: 0; }
+            to { width: 100%; }
+        }
+        @keyframes blink-caret {
+            from, to { border-color: transparent; }
+            50% { border-color: #f97316; }
+        }
+        
+        /* Fade in para nome e cargo */
+        .testimonial-info {
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+        .testimonial-info-visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
     </style>
 </head>
 <body class="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 antialiased">
@@ -346,10 +391,10 @@
                 </div>
                 <div class="mt-16 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     <!-- Testimonial Card -->
-                    <div class="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-md border border-slate-200 dark:border-slate-700">
+                    <div class="testimonial-card bg-white dark:bg-slate-800 p-6 rounded-xl shadow-md border border-slate-200 dark:border-slate-700">
                         <svg class="w-10 h-10 text-orange-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M9.983 3v7.391c0 2.9-2.35 5.258-5.25 5.258h-1.5V21h1.5c4.518 0 8.25-3.694 8.25-8.25V3h-3zM21 3v7.391c0 2.9-2.35 5.258-5.25 5.258h-1.5V21h1.5c4.518 0 8.25-3.694 8.25-8.25V3h-3z" /></svg>
-                        <p class="mt-4 text-slate-600 dark:text-slate-400">"Nunca pensei que gerir a minha loja pudesse ser tão simples. O FlowIn mudou tudo."</p>
-                        <div class="mt-4 border-t border-slate-200 dark:border-slate-700 pt-4 flex items-center justify-between">
+                        <p class="mt-4 text-slate-600 dark:text-slate-400 typewriter-text" data-text="&quot;Nunca pensei que gerir a minha loja pudesse ser tão simples. O FlowIn mudou tudo.&quot;">"</p>
+                        <div class="mt-4 border-t border-slate-200 dark:border-slate-700 pt-4 flex items-center justify-between testimonial-info">
                             <div>
                                 <p class="font-semibold text-slate-800 dark:text-slate-200">Maria Santos</p>
                                 <p class="text-sm text-slate-500 dark:text-slate-400">Proprietária - Luanda</p>
@@ -364,10 +409,10 @@
                         </div>
                     </div>
                     <!-- Testimonial Card -->
-                    <div class="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-md border border-slate-200 dark:border-slate-700">
+                    <div class="testimonial-card bg-white dark:bg-slate-800 p-6 rounded-xl shadow-md border border-slate-200 dark:border-slate-700">
                         <svg class="w-10 h-10 text-orange-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M9.983 3v7.391c0 2.9-2.35 5.258-5.25 5.258h-1.5V21h1.5c4.518 0 8.25-3.694 8.25-8.25V3h-3zM21 3v7.391c0 2.9-2.35 5.258-5.25 5.258h-1.5V21h1.5c4.518 0 8.25-3.694 8.25-8.25V3h-3z" /></svg>
-                        <p class="mt-4 text-slate-600 dark:text-slate-400">"Os relatórios no WhatsApp são perfeitos. Sei exatamente como foi o meu dia, sem precisar de abrir o PC."</p>
-                        <div class="mt-4 border-t border-slate-200 dark:border-slate-700 pt-4 flex items-center justify-between">
+                        <p class="mt-4 text-slate-600 dark:text-slate-400 typewriter-text" data-text="&quot;Os relatórios no WhatsApp são perfeitos. Sei exatamente como foi o meu dia, sem precisar de abrir o PC.&quot;">"</p>
+                        <div class="mt-4 border-t border-slate-200 dark:border-slate-700 pt-4 flex items-center justify-between testimonial-info">
                             <div>
                                 <p class="font-semibold text-slate-800 dark:text-slate-200">João Pereira</p>
                                 <p class="text-sm text-slate-500 dark:text-slate-400">Gerente - Benguela</p>
@@ -382,10 +427,10 @@
                         </div>
                     </div>
                      <!-- Testimonial Card -->
-                    <div class="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-md border border-slate-200 dark:border-slate-700">
+                    <div class="testimonial-card bg-white dark:bg-slate-800 p-6 rounded-xl shadow-md border border-slate-200 dark:border-slate-700">
                         <svg class="w-10 h-10 text-orange-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M9.983 3v7.391c0 2.9-2.35 5.258-5.25 5.258h-1.5V21h1.5c4.518 0 8.25-3.694 8.25-8.25V3h-3zM21 3v7.391c0 2.9-2.35 5.258-5.25 5.258h-1.5V21h1.5c4.518 0 8.25-3.694 8.25-8.25V3h-3z" /></svg>
-                        <p class="mt-4 text-slate-600 dark:text-slate-400">"Sistema inteligente e FÁCIL de usar. Recomendo para qualquer comerciante em Angola."</p>
-                        <div class="mt-4 border-t border-slate-200 dark:border-slate-700 pt-4 flex items-center justify-between">
+                        <p class="mt-4 text-slate-600 dark:text-slate-400 typewriter-text" data-text="&quot;Sistema inteligente e FÁCIL de usar. Recomendo para qualquer comerciante em Angola.&quot;">"</p>
+                        <div class="mt-4 border-t border-slate-200 dark:border-slate-700 pt-4 flex items-center justify-between testimonial-info">
                             <div>
                                 <p class="font-semibold text-slate-800 dark:text-slate-200">Ana Pereira</p>
                                 <p class="text-sm text-slate-500 dark:text-slate-400">Restaurante - Huambo</p>
@@ -587,6 +632,41 @@
         if (analysisSection) {
             observer.observe(analysisSection);
         }
+        
+        // Observar cards de testemunhos para ativar animações
+        const testimonialObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const card = entry.target;
+                    const textElement = card.querySelector('.typewriter-text');
+                    const infoElement = card.querySelector('.testimonial-info');
+                    
+                    if (textElement && !textElement.classList.contains('typewriter-active')) {
+                        // Reset e ativação do typewriter
+                        textElement.style.width = '0';
+                        textElement.style.opacity = '0';
+                        
+                        setTimeout(() => {
+                            textElement.classList.add('typewriter-active');
+                            textElement.textContent = textElement.getAttribute('data-text').replace(/&quot;/g, '"');
+                        }, 100);
+                        
+                        // Mostrar informações após o texto
+                        setTimeout(() => {
+                            if (infoElement) {
+                                infoElement.classList.add('testimonial-info-visible');
+                            }
+                        }, 2800);
+                    }
+                    
+                    testimonialObserver.unobserve(card);
+                }
+            });
+        }, { threshold: 0.3 });
+        
+        document.querySelectorAll('.testimonial-card').forEach(card => {
+            testimonialObserver.observe(card);
+        });
     </script>
 
 </body>
