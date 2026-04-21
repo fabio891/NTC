@@ -1,0 +1,694 @@
+
+<html lang="pt" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlowIn – Gestor Comercial Inteligente</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .gradient-text {
+            background: linear-gradient(to right, #3b82f6, #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .dark .dark\:gradient-text {
+            background: linear-gradient(to right, #60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        /* Animação 1: Contador */
+        @keyframes countUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .counter-animate {
+            animation: countUp 1.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+        
+        /* Animação 2: Sparkline */
+        .sparkline-path {
+            stroke-dasharray: 100;
+            stroke-dashoffset: 100;
+            animation: drawLine 2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+            animation-delay: 0.3s;
+        }
+        @keyframes drawLine {
+            to { stroke-dashoffset: 0; }
+        }
+        
+        /* Animação 3: Barra de Progresso */
+        .progress-bar {
+            transform-origin: left;
+            transform: scaleX(0);
+            animation: growBar 1.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+            animation-delay: 0.8s;
+        }
+        @keyframes growBar {
+            to { transform: scaleX(1); }
+        }
+        
+        /* Animação 4: Barras do Gráfico (Automação) */
+        .bar-chart-rect {
+            transform-origin: bottom;
+            transform: scaleY(0);
+            animation: growBarChart 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+        .bar-chart-rect:nth-child(1) { animation-delay: 0.1s; }
+        .bar-chart-rect:nth-child(2) { animation-delay: 0.2s; }
+        .bar-chart-rect:nth-child(3) { animation-delay: 0.3s; }
+        .bar-chart-rect:nth-child(4) { animation-delay: 0.4s; }
+        @keyframes growBarChart {
+            to { transform: scaleY(1); }
+        }
+        
+        /* Animação 5: Brilho WhatsApp */
+        .shine-effect {
+            fill: url(#shineGradient);
+            animation: shineMove 2s ease-in-out infinite;
+        }
+        @keyframes shineMove {
+            0%, 100% { transform: translateX(-100%); }
+            50% { transform: translateX(100%); }
+        }
+        
+        /* Animação 6: Check WhatsApp */
+        .check-mark {
+            stroke-dasharray: 20;
+            stroke-dashoffset: 20;
+            animation: drawCheck 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+            animation-delay: 2.2s;
+        }
+        @keyframes drawCheck {
+            to { stroke-dashoffset: 0; }
+        }
+        
+        /* Animação 7: Onda Fundo Azul */
+        .wave-path {
+            animation: waveMorph 8s ease-in-out infinite;
+        }
+        @keyframes waveMorph {
+            0%, 100% { d: path("M0,50 Q25,40 50,50 T100,50 L100,100 L0,100 Z"); }
+            25% { d: path("M0,50 Q25,60 50,50 T100,50 L100,100 L0,100 Z"); }
+            50% { d: path("M0,50 Q25,45 50,55 T100,45 L100,100 L0,100 Z"); }
+            75% { d: path("M0,50 Q25,55 50,45 T100,55 L100,100 L0,100 Z"); }
+        }
+        
+        /* Animação 8: Contadores Numéricos */
+        .counter-value {
+            display: inline-block;
+            transition: all 0.3s ease;
+        }
+        .counter-animate-start {
+            animation: pulseCount 0.5s ease-in-out;
+        }
+        @keyframes pulseCount {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        
+        /* Hover effects */
+        .feature-card:hover .icon-container {
+            transform: scale(1.1);
+        }
+        .icon-container {
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        /* Animação 9: Flutuação dos Cards (Floating/Bobbing) */
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
+        }
+        .testimonial-card {
+            animation: float 5s ease-in-out infinite;
+        }
+        .testimonial-card:nth-child(1) { animation-delay: 0s; }
+        .testimonial-card:nth-child(2) { animation-delay: 0.5s; }
+        .testimonial-card:nth-child(3) { animation-delay: 1s; }
+        
+        /* Animação 10: Typewriter Effect - Corrigido para quebra de linha */
+        .typewriter-text {
+            overflow: visible;
+            white-space: normal;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            width: 100%;
+            display: inline;
+        }
+        .typewriter-text::after {
+            content: '|';
+            animation: blink-caret 0.75s step-end infinite;
+            color: #f97316;
+            font-weight: bold;
+        }
+        .typewriter-active::after {
+            opacity: 1;
+        }
+        .typewriter-text.typewriter-complete::after {
+            content: '';
+            animation: none;
+        }
+        @keyframes blink-caret {
+            from, to { opacity: 1; }
+            50% { opacity: 0; }
+        }
+        
+        /* Fade in para nome e cargo */
+        .testimonial-info {
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+        .testimonial-info-visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body class="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 antialiased">
+
+    <!-- Header -->
+    <header class="fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-b border-slate-200 dark:border-slate-800">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-20">
+                <!-- Logo -->
+                <div class="flex-shrink-0">
+                    <a href="Homevist.html" class="flex items-center space-x-2">
+                        <svg class="h-8 w-auto text-orange-500" viewBox="0 0 32 32" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                            <path fill-rule="evenodd" clip-rule="evenodd" d="M16 32C24.8366 32 32 24.8366 32 16C32 7.16344 24.8366 0 16 0C7.16344 0 0 7.16344 0 16C0 24.8366 7.16344 32 16 32ZM13.0125 10.3958C12.5942 9.97746 12.5942 9.30948 13.0125 8.89115C13.4308 8.47281 14.0988 8.47281 14.5171 8.89115L19.804 14.178C20.221 14.5949 20.2223 15.263 19.8073 15.6817L14.5203 21.1067C14.0999 21.5292 13.4326 21.5292 13.0122 21.1067C12.5918 20.6842 12.5918 20.0169 13.0122 19.5944L17.3989 15.076L13.0125 10.3958Z"/>
+                        </svg>
+                        <span class="text-2xl font-bold text-slate-800 dark:text-white">FlowIn</span>
+                    </a>
+                </div>
+                 <!-- Desktop Navigation -->
+                <nav class="hidden md:flex md:items-center md:space-x-8">
+                    <a href="Homevist.html" class="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-orange-500 dark:hover:text-orange-400 transition-colors">Home</a>
+                    <a href="#sobre" class="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-orange-500 dark:hover:text-orange-400 transition-colors">Sobre</a>
+                    <a href="#funcionalidades" class="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-orange-500 dark:hover:text-orange-400 transition-colors">Funcionalidades</a>
+                    <a href="#contacto" class="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-orange-500 dark:hover:text-orange-400 transition-colors">Contacto</a>
+                </nav>
+                <!-- Action Button & Mobile Menu -->
+                <div class="flex items-center space-x-4">
+                     <a href="Regist.html" class="hidden sm:block px-5 py-2.5 text-sm font-semibold text-white bg-orange-500 rounded-lg hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 dark:focus:ring-offset-slate-900 shadow-md transition-colors">
+                        Entrar no Sistema
+                    </a>
+                    <button id="mobile-menu-button" class="md:hidden p-2 rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 focus:outline-none">
+                        <span class="sr-only">Open main menu</span>
+                        <svg class="w-6 h-6" x-show="!open" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
+                    </button>
+                </div>
+            </div>
+             <!-- Mobile Menu -->
+            <div id="mobile-menu" class="hidden md:hidden pb-4">
+                <nav class="flex flex-col space-y-2">
+                    <a href="Homevist.html" class="block px-3 py-2 rounded-md text-base font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800">Home</a>
+                    <a href="#sobre" class="block px-3 py-2 rounded-md text-base font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800">Sobre</a>
+                    <a href="#funcionalidades" class="block px-3 py-2 rounded-md text-base font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800">Funcionalidades</a>
+                    <a href="#contacto" class="block px-3 py-2 rounded-md text-base font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800">Contacto</a>
+                    <div class="border-t border-slate-200 dark:border-slate-800 my-2"></div>
+                    <a href="Regist.html" class="block px-3 py-2 rounded-md text-base font-medium text-white bg-orange-500 hover:bg-orange-600 text-center">Entrar no Sistema</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main class="pt-20">
+        <!-- Hero Section -->
+        <section class="py-20 sm:py-28">
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="grid lg:grid-cols-2 gap-12 items-center">
+                    <div class="text-center lg:text-left">
+                        <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 dark:text-white leading-tight">
+                            Gestão Comercial Inteligente para Todos os Negócios
+                        </h1>
+                        <p class="mt-6 max-w-xl mx-auto lg:mx-0 text-lg text-slate-600 dark:text-slate-400">
+                            Do micro ao grande comércio, o <span class="font-bold text-orange-500">FlowIn</span> simplifica a sua gestão com Inteligência Artificial. Sem fechos diários, sem mais contas manuais. Foque-se no que realmente importa: o seu negócio.
+                        </p>
+                        <div class="mt-10 flex flex-col sm:flex-row justify-center lg:justify-start items-center gap-4">
+                            <a href="Regist.html" class="w-full sm:w-auto inline-flex items-center justify-center px-6 py-3 text-base font-semibold text-white bg-orange-500 rounded-lg shadow-lg hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 transform hover:scale-105 transition-transform duration-200">
+                                Experimente o FlowIn
+                                <svg class="ml-2 w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
+                            </a>
+                            <a href="Regist.html" class="w-full sm:w-auto px-6 py-3 text-base font-semibold text-slate-800 dark:text-slate-200 bg-white dark:bg-slate-800 rounded-lg shadow-lg hover:bg-slate-100 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 border border-slate-200 dark:border-slate-700 transition-colors">
+                                Entre em contacto
+                            </a>
+                        </div>
+                    </div>
+                    <div class="hidden lg:block bg-slate-50 dark:bg-slate-800/50 p-6 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 transform hover:scale-105 transition-transform duration-300">
+                         <div class="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-md counter-animate">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <p class="text-sm text-slate-500 dark:text-slate-400">Vendas Hoje</p>
+                                    <p class="text-2xl font-bold text-slate-900 dark:text-white" id="sales-counter">Kz 0</p>
+                                </div>
+                                <div class="bg-green-100 dark:bg-green-900/50 text-green-600 dark:text-green-400 p-3 rounded-full cursor-pointer hover:bg-green-200 dark:hover:bg-green-800/50 transition-colors icon-container">
+                                    <!-- SVG Animado: Gráfico Sparkline -->
+                                    <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path class="sparkline-path" d="M3 17L9 11L13 15L21 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                </div>
+                            </div>
+                            <div class="mt-4 h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                                <div class="h-full bg-gradient-to-r from-green-400 to-emerald-500 progress-bar" style="width: 75%"></div>
+                            </div>
+                         </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Why Choose Us Section -->
+        <section id="sobre" class="py-16 sm:py-24 bg-slate-50 dark:bg-slate-800/50">
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center max-w-3xl mx-auto">
+                    <h2 class="text-3xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-4xl">Porque Escolher o <span class="text-orange-500">FlowIn?</span></h2>
+                    <p class="mt-4 text-lg text-slate-600 dark:text-slate-400">Revolucione a gestão do seu negócio com inteligência artificial e automação avançada</p>
+                </div>
+                <div class="mt-16 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                    <!-- Feature Card -->
+                    <div class="feature-card bg-white dark:bg-slate-800 p-6 rounded-xl shadow-md text-center">
+                        <div class="icon-container mx-auto bg-orange-100 dark:bg-orange-900/50 text-orange-600 dark:text-orange-400 w-12 h-12 rounded-lg flex items-center justify-center">
+                            <!-- SVG Animado: Automação Inteligente (Gráfico de Barras) -->
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect class="bar-chart-rect" x="3" y="10" width="4" height="10" rx="1"/>
+                                <rect class="bar-chart-rect" x="9" y="6" width="4" height="14" rx="1"/>
+                                <rect class="bar-chart-rect" x="15" y="8" width="4" height="12" rx="1"/>
+                                <rect class="bar-chart-rect" x="21" y="4" width="4" height="16" rx="1" fill="#f97316" stroke="#f97316"/>
+                            </svg>
+                        </div>
+                        <h3 class="mt-4 text-lg font-semibold text-slate-800 dark:text-slate-100">Automação Inteligente</h3>
+                        <p class="mt-2 text-sm text-slate-600 dark:text-slate-400">A IA faz o balanço diário, semanal e mensal, entregando os relatórios prontos no WhatsApp.</p>
+                    </div>
+                    <!-- Feature Card -->
+                    <div class="feature-card bg-white dark:bg-slate-800 p-6 rounded-xl shadow-md text-center">
+                        <div class="icon-container mx-auto bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 w-12 h-12 rounded-lg flex items-center justify-center">
+                            <!-- SVG Animado: Relatórios WhatsApp -->
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <defs>
+                                    <linearGradient id="shineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                        <stop offset="0%" stop-color="rgba(255,255,255,0)"/>
+                                        <stop offset="50%" stop-color="rgba(255,255,255,0.4)"/>
+                                        <stop offset="100%" stop-color="rgba(255,255,255,0)"/>
+                                    </linearGradient>
+                                </defs>
+                                <rect x="5" y="2" width="14" height="20" rx="2"/>
+                                <path d="M12 18h.01"/>
+                                <!-- Brilho animado -->
+                                <rect class="shine-effect" x="5" y="2" width="14" height="20" rx="2" opacity="0.3"/>
+                                <!-- Check mark animado -->
+                                <path class="check-mark" d="M9 12l2 2 4-4" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                            </svg>
+                        </div>
+                        <h3 class="mt-4 text-lg font-semibold text-slate-800 dark:text-slate-100">Zero Complicações</h3>
+                        <p class="mt-2 text-sm text-slate-600 dark:text-slate-400">Relatórios claros via WhatsApp, sem a necessidade de planilhas, simples e intuitivos.</p>
+                    </div>
+                    <!-- Feature Card -->
+                    <div class="feature-card bg-white dark:bg-slate-800 p-6 rounded-xl shadow-md text-center">
+                        <div class="icon-container mx-auto bg-green-100 dark:bg-green-900/50 text-green-600 dark:text-green-400 w-12 h-12 rounded-lg flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+                        </div>
+                        <h3 class="mt-4 text-lg font-semibold text-slate-800 dark:text-slate-100">Gestão Completa</h3>
+                        <p class="mt-2 text-sm text-slate-600 dark:text-slate-400">Controle de clientes, produtos, vendas e despesas, tudo num só lugar. Tudo integrado.</p>
+                    </div>
+                     <!-- Feature Card -->
+                    <div class="feature-card bg-white dark:bg-slate-800 p-6 rounded-xl shadow-md text-center">
+                        <div class="icon-container mx-auto bg-purple-100 dark:bg-purple-900/50 text-purple-600 dark:text-purple-400 w-12 h-12 rounded-lg flex items-center justify-center">
+                            <!-- Ícone de Escalabilidade: Gráfico de Barras Ascendentes -->
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="12" y1="20" x2="12" y2="10" class="bar-chart-rect"/>
+                                <line x1="18" y1="20" x2="18" y2="4" class="bar-chart-rect" style="animation-delay: 0.2s;"/>
+                                <line x1="6" y1="20" x2="6" y2="16" class="bar-chart-rect" style="animation-delay: 0.1s;"/>
+                            </svg>
+                        </div>
+                        <h3 class="mt-4 text-lg font-semibold text-slate-800 dark:text-slate-100">Escalabilidade Total</h3>
+                        <p class="mt-2 text-sm text-slate-600 dark:text-slate-400">Do micro ao grande comércio. O sistema cresce e se adapta às suas necessidades.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Simple Management Section -->
+        <section id="funcionalidades" class="py-16 sm:py-24">
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="grid lg:grid-cols-2 gap-12 items-center">
+                    <div>
+                        <h2 class="text-3xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-4xl">Gestão <span class="text-orange-500">Sem Complicações</span></h2>
+                        <p class="mt-4 text-lg text-slate-600 dark:text-slate-400">O <span class="font-semibold">FlowIn</span> elimina burocracias e tarefas repetitivas. Poupa tempo e reduza erros, entregando informações claras e diretas para o gestor.</p>
+                        <ul class="mt-8 space-y-4">
+                            <li class="flex items-start">
+                                <svg class="w-6 h-6 text-green-500 mr-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                <span>Adaptado ao contexto de <span class="font-semibold">Angola</span>, com o Plano de Contas (IVA) e métodos de pagamento locais: <span class="font-semibold">MCX Express, Transferência Bancária, TPA, Cash, Cartão de Crédito e Depósito.</span></span>
+                            </li>
+                            <li class="flex items-start">
+                                <svg class="w-6 h-6 text-green-500 mr-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                <span>Desde pequenos negócios familiares até grandes empresas, o FlowIn foi feito para <span class="font-semibold">crescer com o utilizador</span>.</span>
+                            </li>
+                            <li class="flex items-start">
+                                <svg class="w-6 h-6 text-green-500 mr-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                <span>Relatórios automáticos via WhatsApp.</span>
+                            </li>
+                            <li class="flex items-start">
+                                <svg class="w-6 h-6 text-green-500 mr-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                <span>Gestão completa de vendas e despesas.</span>
+                            </li>
+                             <li class="flex items-start">
+                                <svg class="w-6 h-6 text-green-500 mr-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                <span>Análises de lucro em tempo real.</span>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="relative bg-blue-600 p-8 rounded-2xl shadow-2xl text-white overflow-hidden">
+                        <!-- Fundo Animado: Onda Vetorial -->
+                        <svg class="absolute inset-0 w-full h-full opacity-10" viewBox="0 0 100 100" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+                            <path class="wave-path" fill="#ffffff" opacity="0.1"/>
+                        </svg>
+                        
+                        <h4 class="text-xl font-bold relative z-10">Análise Inteligente</h4>
+                        <div class="mt-6 space-y-4 relative z-10">
+                            <div class="flex justify-between items-center bg-blue-700/50 p-3 rounded-lg">
+                                <p>Vendas do Mês</p>
+                                <p class="font-bold text-green-400"><span class="counter-value" data-target="23">0</span>%</p>
+                            </div>
+                             <div class="flex justify-between items-center bg-blue-700/50 p-3 rounded-lg">
+                                <p>Produtos em Falta</p>
+                                <p class="font-bold"><span class="counter-value" data-target="3">0</span> Itens</p>
+                            </div>
+                             <div class="flex justify-between items-center bg-blue-700/50 p-3 rounded-lg">
+                                <p>Margem de Lucro</p>
+                                <p class="font-bold"><span class="counter-value" data-target="29.5">0</span>%</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Testimonials Section -->
+        <section class="py-16 sm:py-24 bg-slate-50 dark:bg-slate-800/50">
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center max-w-3xl mx-auto">
+                    <h2 class="text-3xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-4xl">O Que Dizem os Nossos <span class="text-orange-500">Clientes</span></h2>
+                </div>
+                <div class="mt-16 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <!-- Testimonial Card -->
+                    <div class="testimonial-card bg-white dark:bg-slate-800 p-6 rounded-xl shadow-md border border-slate-200 dark:border-slate-700">
+                        <svg class="w-10 h-10 text-orange-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M9.983 3v7.391c0 2.9-2.35 5.258-5.25 5.258h-1.5V21h1.5c4.518 0 8.25-3.694 8.25-8.25V3h-3zM21 3v7.391c0 2.9-2.35 5.258-5.25 5.258h-1.5V21h1.5c4.518 0 8.25-3.694 8.25-8.25V3h-3z" /></svg>
+                        <p class="mt-4 text-slate-600 dark:text-slate-400 typewriter-text" data-text="Nunca pensei que gerir a minha loja pudesse ser tão simples. O FlowIn mudou tudo."></p>
+                        <div class="testimonial-author-wrapper mt-4 border-t border-slate-200 dark:border-slate-700 pt-4 flex items-center justify-between" style="opacity: 0; transition: opacity 0.5s ease;">
+                            <div>
+                                <p class="font-semibold text-slate-800 dark:text-slate-200">Maria Santos</p>
+                                <p class="text-sm text-slate-500 dark:text-slate-400">Proprietária - Luanda</p>
+                            </div>
+                            <div class="flex text-yellow-400">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Testimonial Card -->
+                    <div class="testimonial-card bg-white dark:bg-slate-800 p-6 rounded-xl shadow-md border border-slate-200 dark:border-slate-700">
+                        <svg class="w-10 h-10 text-orange-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M9.983 3v7.391c0 2.9-2.35 5.258-5.25 5.258h-1.5V21h1.5c4.518 0 8.25-3.694 8.25-8.25V3h-3zM21 3v7.391c0 2.9-2.35 5.258-5.25 5.258h-1.5V21h1.5c4.518 0 8.25-3.694 8.25-8.25V3h-3z" /></svg>
+                        <p class="mt-4 text-slate-600 dark:text-slate-400 typewriter-text" data-text="Os relatórios no WhatsApp são perfeitos. Sei exatamente como foi o meu dia, sem precisar de abrir o PC."></p>
+                        <div class="testimonial-author-wrapper mt-4 border-t border-slate-200 dark:border-slate-700 pt-4 flex items-center justify-between" style="opacity: 0; transition: opacity 0.5s ease;">
+                            <div>
+                                <p class="font-semibold text-slate-800 dark:text-slate-200">João Pereira</p>
+                                <p class="text-sm text-slate-500 dark:text-slate-400">Gerente - Benguela</p>
+                            </div>
+                           <div class="flex text-yellow-400">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                            </div>
+                        </div>
+                    </div>
+                     <!-- Testimonial Card -->
+                    <div class="testimonial-card bg-white dark:bg-slate-800 p-6 rounded-xl shadow-md border border-slate-200 dark:border-slate-700">
+                        <svg class="w-10 h-10 text-orange-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M9.983 3v7.391c0 2.9-2.35 5.258-5.25 5.258h-1.5V21h1.5c4.518 0 8.25-3.694 8.25-8.25V3h-3zM21 3v7.391c0 2.9-2.35 5.258-5.25 5.258h-1.5V21h1.5c4.518 0 8.25-3.694 8.25-8.25V3h-3z" /></svg>
+                        <p class="mt-4 text-slate-600 dark:text-slate-400 typewriter-text" data-text="Sistema inteligente e FÁCIL de usar. Recomendo para qualquer comerciante em Angola."></p>
+                        <div class="testimonial-author-wrapper mt-4 border-t border-slate-200 dark:border-slate-700 pt-4 flex items-center justify-between" style="opacity: 0; transition: opacity 0.5s ease;">
+                            <div>
+                                <p class="font-semibold text-slate-800 dark:text-slate-200">Ana Pereira</p>
+                                <p class="text-sm text-slate-500 dark:text-slate-400">Restaurante - Huambo</p>
+                            </div>
+                            <div class="flex text-yellow-400">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- CTA Section -->
+        <section class="bg-orange-500">
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
+                <h2 class="text-3xl font-bold tracking-tight text-white sm:text-4xl">Pronto para Revolucionar o Seu Negócio?</h2>
+                <p class="mt-4 text-lg text-orange-100 max-w-2xl mx-auto">Junte-se a milhares de empresários que já descobriram o poder da gestão simplificada e inteligente.</p>
+                <div class="mt-8">
+                     <a href="Regist.html" class="inline-flex items-center justify-center px-8 py-4 text-base font-semibold text-orange-600 bg-white rounded-lg shadow-lg hover:bg-orange-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white transform hover:scale-105 transition-transform duration-200">
+                        Começar Agora - Grátis
+                        <svg class="ml-2 w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
+                    </a>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer id="contacto" class="bg-slate-900 text-slate-400">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+                <!-- About Column -->
+                <div class="md:col-span-1">
+                    <a href="Regist.html" class="flex items-center space-x-2">
+                         <svg class="h-8 w-auto text-orange-500" viewBox="0 0 32 32" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                            <path fill-rule="evenodd" clip-rule="evenodd" d="M16 32C24.8366 32 32 24.8366 32 16C32 7.16344 24.8366 0 16 0C7.16344 0 0 7.16344 0 16C0 24.8366 7.16344 32 16 32ZM13.0125 10.3958C12.5942 9.97746 12.5942 9.30948 13.0125 8.89115C13.4308 8.47281 14.0988 8.47281 14.5171 8.89115L19.804 14.178C20.221 14.5949 20.2223 15.263 19.8073 15.6817L14.5203 21.1067C14.0999 21.5292 13.4326 21.5292 13.0122 21.1067C12.5918 20.6842 12.5918 20.0169 13.0122 19.5944L17.3989 15.076L13.0125 10.3958Z"/>
+                        </svg>
+                        <span class="text-2xl font-bold text-white">FlowIn</span>
+                    </a>
+                    <p class="mt-4 text-sm">A plataforma de gestão comercial mais inteligente e intuitiva para negócios em Angola. Do micro ao grande comércio.</p>
+                </div>
+                <!-- Links Columns -->
+                <div>
+                    <h3 class="text-sm font-semibold text-white tracking-wider uppercase">Funcionalidades</h3>
+                    <ul class="mt-4 space-y-2">
+                        <li><a href="Regist.html" class="text-sm hover:text-white transition-colors">Gestão de Vendas</a></li>
+                        <li><a href="Regist.html" class="text-sm hover:text-white transition-colors">Relatórios Automáticos</a></li>
+                        <li><a href="Regist.html" class="text-sm hover:text-white transition-colors">IA</a></li>
+                    </ul>
+                </div>
+                 <div>
+                    <h3 class="text-sm font-semibold text-white tracking-wider uppercase">Suporte</h3>
+                    <ul class="mt-4 space-y-2">
+                        <li><a href="Regist.html" class="text-sm hover:text-white transition-colors">Documentação</a></li>
+                        <li><a href="Regist.html" class="text-sm hover:text-white transition-colors">Tutoriais</a></li>
+                        <li><a href="Regist.html" class="text-sm hover:text-white transition-colors">FAQ</a></li>
+                    </ul>
+                </div>
+                 <div>
+                    <h3 class="text-sm font-semibold text-white tracking-wider uppercase">Legal</h3>
+                    <ul class="mt-4 space-y-2">
+                        <li><a href="Regist.html" class="text-sm hover:text-white transition-colors">Termos de Uso</a></li>
+                        <li><a href="Regist.html" class="text-sm hover:text-white transition-colors">Política de Privacidade</a></li>
+                        <li><a href="Regist.html" class="text-sm hover:text-white transition-colors">Contacto</a></li>
+                    </ul>
+                </div>
+            </div>
+             <div class="mt-8 border-t border-slate-800 pt-8 flex flex-col md:flex-row justify-between items-center">
+                <p class="text-sm text-slate-500">&copy; 2025 FlowIn. Gestor Comercial Inteligente para Angola. Todos os direitos reservados.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        const mobileMenuButton = document.getElementById('mobile-menu-button');
+        const mobileMenu = document.getElementById('mobile-menu');
+
+        mobileMenuButton.addEventListener('click', () => {
+            mobileMenu.classList.toggle('hidden');
+        });
+
+        // Close mobile menu when a link is clicked
+        document.querySelectorAll('#mobile-menu a').forEach(link => {
+            link.addEventListener('click', () => {
+                mobileMenu.classList.add('hidden');
+            });
+        });
+        
+        // Animação do Contador de Vendas (Hero Section)
+        function animateCounter(elementId, targetValue, duration = 1500) {
+            const element = document.getElementById(elementId);
+            if (!element) return;
+            
+            const startValue = 0;
+            const startTime = performance.now();
+            
+            function updateCounter(currentTime) {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                
+                // Easing function: cubic-bezier(0.4, 0, 0.2, 1)
+                const easeOutQuart = 1 - Math.pow(1 - progress, 4);
+                
+                const currentValue = Math.floor(startValue + (targetValue - startValue) * easeOutQuart);
+                element.textContent = 'Kz ' + currentValue.toLocaleString('pt-AO');
+                
+                if (progress < 1) {
+                    requestAnimationFrame(updateCounter);
+                } else {
+                    element.textContent = 'Kz ' + targetValue.toLocaleString('pt-AO');
+                }
+            }
+            
+            requestAnimationFrame(updateCounter);
+        }
+        
+        // Iniciar animação quando a página carregar
+        window.addEventListener('load', () => {
+            // Animar contador de vendas (valor alvo: 128.450)
+            setTimeout(() => {
+                animateCounter('sales-counter', 128450, 2000);
+            }, 500);
+        });
+        
+        // Função para animar contadores numéricos da seção "Análise Inteligente"
+        function animateAnalysisCounters() {
+            const counters = document.querySelectorAll('.counter-value');
+            
+            counters.forEach(counter => {
+                const target = parseFloat(counter.getAttribute('data-target'));
+                const duration = 2000; // 2 segundos
+                const startTime = performance.now();
+                const isDecimal = target % 1 !== 0;
+                
+                function updateCount(currentTime) {
+                    const elapsed = currentTime - startTime;
+                    const progress = Math.min(elapsed / duration, 1);
+                    
+                    // Easing function: ease-out
+                    const easeOut = 1 - Math.pow(1 - progress, 3);
+                    
+                    const currentValue = target * easeOut;
+                    
+                    if (isDecimal) {
+                        counter.textContent = currentValue.toFixed(1);
+                    } else {
+                        counter.textContent = Math.floor(currentValue);
+                    }
+                    
+                    if (progress < 1) {
+                        requestAnimationFrame(updateCount);
+                    } else {
+                        // Garantir valor final correto
+                        if (isDecimal) {
+                            counter.textContent = target.toFixed(1);
+                        } else {
+                            counter.textContent = target;
+                        }
+                        counter.classList.add('counter-animate-start');
+                    }
+                }
+                
+                requestAnimationFrame(updateCount);
+            });
+        }
+        
+        // Intersection Observer para animações on-scroll
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px'
+        };
+        
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.animationPlayState = 'running';
+                    
+                    // Se for a seção de análise inteligente, animar os contadores
+                    if (entry.target.closest('#funcionalidades') && !entry.target.dataset.animated) {
+                        entry.target.dataset.animated = 'true';
+                        animateAnalysisCounters();
+                    }
+                }
+            });
+        }, observerOptions);
+        
+        // Observar elementos animados
+        document.querySelectorAll('.bar-chart-rect, .sparkline-path, .progress-bar, .shine-effect, .check-mark, .wave-path').forEach(el => {
+            observer.observe(el);
+        });
+        
+        // Observar a seção de análise inteligente para ativar contadores
+        const analysisSection = document.querySelector('#funcionalidades');
+        if (analysisSection) {
+            observer.observe(analysisSection);
+        }
+        
+        // Observar cards de testemunhos para ativar animações
+        const testimonialObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const card = entry.target;
+                    const textElement = card.querySelector('.typewriter-text');
+                    const authorWrapper = card.querySelector('.testimonial-author-wrapper');
+                    
+                    if (textElement && !textElement.classList.contains('typewriter-active')) {
+                        const fullText = textElement.getAttribute('data-text');
+                        const textLength = fullText.length;
+                        const typingSpeed = 50; // 50ms por caractere
+                        
+                        // Adicionar aspas ao texto
+                        textElement.textContent = '"';
+                        textElement.classList.add('typewriter-active');
+                        
+                        let charIndex = 0;
+                        
+                        function typeCharacter() {
+                            if (charIndex < textLength) {
+                                textElement.textContent += fullText.charAt(charIndex);
+                                charIndex++;
+                                setTimeout(typeCharacter, typingSpeed);
+                            } else {
+                                // Adicionar aspa final
+                                textElement.textContent += '"';
+                                textElement.classList.add('typewriter-complete');
+                                
+                                // Mostrar autor e cargo após o texto com fade-in
+                                setTimeout(() => {
+                                    if (authorWrapper) {
+                                        authorWrapper.style.opacity = '1';
+                                    }
+                                }, 200);
+                            }
+                        }
+                        
+                        // Iniciar digitação após pequeno delay
+                        setTimeout(typeCharacter, 100);
+                    }
+                    
+                    testimonialObserver.unobserve(card);
+                }
+            });
+        }, { threshold: 0.3 });
+        
+        document.querySelectorAll('.testimonial-card').forEach(card => {
+            testimonialObserver.observe(card);
+        });
+    </script>
+
+</body>
+</html>
