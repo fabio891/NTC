@@ -4,7 +4,18 @@
  * Login e Registro de utilizadores com validação contra base de dados
  */
 
-require_once '../../Config/database.php';
+// Iniciar sessão
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// Se já estiver logado, redirecionar
+if (isset($_SESSION['user_id'])) {
+    header('Location: dashboard.php');
+    exit;
+}
+
+require_once '../../../Config/database.php';
 
 $error = '';
 $success = '';
@@ -121,12 +132,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $error = 'Ocorreu um erro ao criar a conta. Tente novamente.';
         }
     }
-}
-
-// Se já estiver logado, redirecionar
-if (isset($_SESSION['user_id'])) {
-    header('Location: dashboard.php');
-    exit;
 }
 ?>
 <!DOCTYPE html>
