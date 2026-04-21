@@ -15,7 +15,7 @@ if (isset($_SESSION['user_id'])) {
     exit;
 }
 
-require_once '../../../Config/database.php';
+require_once __DIR__ . '/../../../Config/database.php';
 
 $error = '';
 $success = '';
