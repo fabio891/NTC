@@ -110,11 +110,11 @@
                 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                     <div>
                         <h1 class="text-2xl font-bold text-white">Gestão de Equipa</h1>
-                        <p class="text-slate-400 mt-1">Convide e gira os acessos da sua equipa</p>
+                        <p class="text-slate-400 mt-1">Adicione e gerencie os membros da sua equipa</p>
                     </div>
-                    <button id="invite-user-button" class="w-full sm:w-auto mt-4 sm:mt-0 flex items-center justify-center bg-slate-700 hover:bg-slate-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors">
-                        <svg class="h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM4 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 0110.374 21c-2.331 0-4.512-.645-6.374-1.766z" /></svg>
-                        Convidar Utilizador
+                    <button id="add-member-button" class="w-full sm:w-auto mt-4 sm:mt-0 flex items-center justify-center bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors">
+                        <svg class="h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                        Adicionar Membro
                     </button>
                 </div>
                 
@@ -123,53 +123,126 @@
                      <div class="px-6 py-4 flex items-center justify-between">
                         <div class="flex items-center space-x-2">
                              <svg class="h-6 w-6 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-4.683c.65-.935 1-2.06 1-3.255a4.5 4.5 0 00-9 0c0 1.195.35 2.32 1 3.255a6.375 6.375 0 0111.964 4.684-12.318 12.318 0 01-8.624 2.92z" /></svg>
-                            <h3 class="text-lg font-semibold text-white">Membros da Equipa (0)</h3>
+                            <h3 class="text-lg font-semibold text-white">Membros da Equipa (<span id="member-count">0</span>)</h3>
                         </div>
-                        <button class="text-slate-400 hover:text-white transition-colors">
-                            <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001a.75.75 0 01.75.75v3.182a.75.75 0 01-.75.75h-3.182a.75.75 0 01-.75-.75V11.25a.75.75 0 01.75-.75z" /><path stroke-linecap="round" stroke-linejoin="round" d="M11.683 15.54a.75.75 0 01.07.03l.004.002l.005.002l.006.002l.006.002l.006.001l.007.001l.007.001l.008.001l.008.001l.008 0l.009 0l.009 0l.009 0l.009 0l.008 0l.008 0l.008-.001l.007-.001l.007-.001l.006-.001l.006-.002l.006-.002l.005-.002l.004-.002a.75.75 0 01.428-1.421 6.002 6.002 0 00-4.03-9.06A6.002 6.002 0 005.353 4.887a.75.75 0 01-1.35.53A7.5 7.5 0 0115.54 3.75a.75.75 0 01-1.06 1.06 6 6 0 00-8.24 8.24.75.75 0 01-.07-.03z" /></svg>
-                        </button>
                     </div>
-                    <div class="text-center py-20 px-6 bg-slate-800 rounded-lg">
-                        <p class="text-slate-400">Nenhum outro membro na equipa.</p>
-                        <p class="text-slate-500 text-sm mt-1">Utilize o botão "Convidar Utilizador" para adicionar novos membros.</p>
+                    
+                    <!-- Empty State -->
+                    <div id="empty-state" class="text-center py-20 px-6 bg-slate-800 rounded-lg">
+                        <svg class="h-16 w-16 mx-auto text-slate-600 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
+                        </svg>
+                        <p class="text-slate-400 font-medium">Nenhum membro na equipa</p>
+                        <p class="text-slate-500 text-sm mt-1">Clique em "Adicionar Membro" para começar</p>
+                    </div>
+                    
+                    <!-- Members Grid -->
+                    <div id="members-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 hidden">
+                        <!-- Member cards will be dynamically inserted here -->
                     </div>
                 </div>
             </div>
         </main>
     </div>
 
-    <!-- Invite User Modal -->
-    <div id="invite-user-modal" class="fixed inset-0 bg-black/60 z-40 hidden items-center justify-center">
-        <div class="bg-slate-800 rounded-lg shadow-xl w-full max-w-md">
+    <!-- Add Member Modal -->
+    <div id="add-member-modal" class="fixed inset-0 bg-black/60 z-40 hidden items-center justify-center">
+        <div class="bg-slate-800 rounded-xl shadow-xl w-full max-w-lg mx-4">
             <div class="flex items-center justify-between p-5 border-b border-slate-700">
-                <h2 class="text-xl font-bold text-white">Convidar Novo Utilizador</h2>
-                <button id="close-invite-modal" class="text-slate-400 hover:text-white">
+                <h2 class="text-xl font-bold text-white">Adicionar Membro da Equipa</h2>
+                <button id="close-add-modal" class="text-slate-400 hover:text-white transition-colors">
                     <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
             </div>
             <div class="p-6">
-                <div class="bg-blue-900/50 border border-blue-700 text-blue-300 text-sm rounded-lg p-4 mb-6">
-                    <strong>Importante:</strong> Por razões de segurança, os convites são geridos pelo painel de administração da sua aplicação no Base44. Esta janela ajuda a organizar o processo.
-                </div>
-                <form>
+                <form id="add-member-form">
+                    <!-- Nome Completo -->
                     <div>
-                        <label class="block text-sm font-medium text-slate-300">E-mail do Convidado</label>
-                        <input type="email" placeholder="nome@empresa.com" class="mt-1 w-full bg-slate-700 border border-slate-600 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-orange-500">
+                        <label class="block text-sm font-medium text-slate-300 mb-1">Nome Completo <span class="text-orange-500">*</span></label>
+                        <input type="text" id="member-name" required minlength="6" placeholder="Ex: João Manuel C." 
+                            class="w-full bg-slate-700 border border-slate-600 rounded-lg py-2.5 px-3 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 transition-all">
+                        <p class="text-xs text-slate-500 mt-1">Mínimo 6 caracteres</p>
                     </div>
+                    
+                    <!-- Email -->
                     <div class="mt-4">
-                        <label class="block text-sm font-medium text-slate-300">Perfil de Acesso</label>
-                         <select class="mt-1 w-full appearance-none bg-slate-700 border border-slate-600 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-orange-500">
-                            <option>Staff</option>
-                            <option>Administrador</option>
-                            <option>Financeiro</option>
-                            <option>Comercial</option>
-                            <option>Operacional</option>
+                        <label class="block text-sm font-medium text-slate-300 mb-1">Email <span class="text-orange-500">*</span></label>
+                        <input type="email" id="member-email" required placeholder="joao.manuel@email.com" 
+                            class="w-full bg-slate-700 border border-slate-600 rounded-lg py-2.5 px-3 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 transition-all">
+                    </div>
+                    
+                    <!-- Telemóvel & BI -->
+                    <div class="grid grid-cols-2 gap-4 mt-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-300 mb-1">Telemóvel <span class="text-orange-500">*</span></label>
+                            <input type="tel" id="member-phone" required placeholder="923 456 789" maxlength="12"
+                                class="w-full bg-slate-700 border border-slate-600 rounded-lg py-2.5 px-3 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 transition-all">
+                            <p class="text-xs text-slate-500 mt-1">Formato: 9XX XXX XXX</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-300 mb-1">Nº do Bilhete (BI) <span class="text-orange-500">*</span></label>
+                            <input type="text" id="member-bi" required minlength="5" placeholder="0000000LA" 
+                                class="w-full bg-slate-700 border border-slate-600 rounded-lg py-2.5 px-3 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 transition-all">
+                        </div>
+                    </div>
+                    
+                    <!-- Função -->
+                    <div class="mt-4">
+                        <label class="block text-sm font-medium text-slate-300 mb-1">Função <span class="text-orange-500">*</span></label>
+                        <select id="member-role" required 
+                            class="w-full appearance-none bg-slate-700 border border-slate-600 rounded-lg py-2.5 px-3 text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 transition-all cursor-pointer">
+                            <option value="" disabled selected>Selecione uma função</option>
+                            <option value="Gestor">Gestor</option>
+                            <option value="Administrador">Administrador</option>
                         </select>
+                    </div>
+                    
+                    <!-- Notas -->
+                    <div class="mt-4">
+                        <label class="block text-sm font-medium text-slate-300 mb-1">Notas <span class="text-slate-500">(opcional)</span></label>
+                        <textarea id="member-notes" rows="3" placeholder="Informações adicionais sobre o membro..." 
+                            class="w-full bg-slate-700 border border-slate-600 rounded-lg py-2.5 px-3 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 transition-all resize-none"></textarea>
                     </div>
                 </form>
             </div>
-             <div class="p-5 bg-slate-900/50 border-t border-slate-700 flex justify-end">
-                <button type="button" class="py-2 px-4 rounded-lg bg-white hover:bg-slate-200 text-sm font-semibold text-slate-800">Continuar para Convite</button>
+            <div class="p-5 bg-slate-900/50 border-t border-slate-700 flex justify-end space-x-3 rounded-b-xl">
+                <button type="button" id="cancel-add-member" class="py-2.5 px-5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 font-semibold transition-colors">
+                    Cancelar
+                </button>
+                <button type="submit" form="add-member-form" class="py-2.5 px-5 rounded-lg bg-orange-500 hover:bg-orange-600 text-white font-semibold transition-colors">
+                    Adicionar Membro
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-4 right-4 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg transform translate-y-20 opacity-0 transition-all duration-300 z-50 flex items-center space-x-2">
+        <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+        </svg>
+        <span id="toast-message">Membro adicionado com sucesso!</span>
+    </div>
+    
+    <!-- Delete Confirmation Modal -->
+    <div id="delete-modal" class="fixed inset-0 bg-black/60 z-50 hidden items-center justify-center">
+        <div class="bg-slate-800 rounded-xl shadow-xl w-full max-w-md mx-4 p-6">
+            <div class="flex items-center space-x-3 mb-4">
+                <div class="h-10 w-10 rounded-full bg-red-500/20 flex items-center justify-center">
+                    <svg class="h-6 w-6 text-red-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                    </svg>
+                </div>
+                <h3 class="text-lg font-bold text-white">Remover Membro</h3>
+            </div>
+            <p class="text-slate-300 mb-6">Tem certeza que deseja remover <span id="delete-member-name" class="font-semibold text-white"></span> da equipa? Esta ação não pode ser desfeita.</p>
+            <div class="flex justify-end space-x-3">
+                <button type="button" id="cancel-delete" class="py-2.5 px-5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 font-semibold transition-colors">
+                    Cancelar
+                </button>
+                <button type="button" id="confirm-delete" class="py-2.5 px-5 rounded-lg bg-red-500 hover:bg-red-600 text-white font-semibold transition-colors">
+                    Remover
+                </button>
             </div>
         </div>
     </div>
@@ -196,29 +269,219 @@
             closeMenuButton.addEventListener('click', closeMenu);
             mobileMenuOverlay.addEventListener('click', closeMenu);
             
-            // Invite User Modal Controls
-            const inviteModal = document.getElementById('invite-user-modal');
-            const inviteButton = document.getElementById('invite-user-button');
-            const closeModalButton = document.getElementById('close-invite-modal');
-
-            const openInviteModal = () => {
-                inviteModal.classList.remove('hidden');
-                inviteModal.classList.add('flex');
-            };
-
-            const closeInviteModal = () => {
-                inviteModal.classList.add('hidden');
-                inviteModal.classList.remove('flex');
-            };
-
-            inviteButton.addEventListener('click', openInviteModal);
-            closeModalButton.addEventListener('click', closeInviteModal);
+            // Member Management State
+            let members = JSON.parse(localStorage.getItem('flowin_members')) || [];
+            let memberToDelete = null;
             
-            inviteModal.addEventListener('click', (event) => {
-                if (event.target === inviteModal) {
-                    closeInviteModal();
+            // DOM Elements - Add Member Modal
+            const addMemberModal = document.getElementById('add-member-modal');
+            const addMemberButton = document.getElementById('add-member-button');
+            const closeAddModalButton = document.getElementById('close-add-modal');
+            const cancelAddMemberButton = document.getElementById('cancel-add-member');
+            const addMemberForm = document.getElementById('add-member-form');
+            
+            // DOM Elements - Delete Modal
+            const deleteModal = document.getElementById('delete-modal');
+            const cancelDeleteButton = document.getElementById('cancel-delete');
+            const confirmDeleteButton = document.getElementById('confirm-delete');
+            const deleteMemberNameSpan = document.getElementById('delete-member-name');
+            
+            // DOM Elements - Toast
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toast-message');
+            
+            // DOM Elements - Members Display
+            const emptyState = document.getElementById('empty-state');
+            const membersGrid = document.getElementById('members-grid');
+            const memberCountSpan = document.getElementById('member-count');
+            
+            // Phone mask function
+            const applyPhoneMask = (value) => {
+                const numbers = value.replace(/\D/g, '');
+                if (numbers.length <= 3) return numbers;
+                if (numbers.length <= 6) return `${numbers.slice(0, 3)} ${numbers.slice(3)}`;
+                return `${numbers.slice(0, 3)} ${numbers.slice(3, 6)} ${numbers.slice(6, 9)}`;
+            };
+            
+            // Apply phone mask on input
+            const phoneInput = document.getElementById('member-phone');
+            phoneInput.addEventListener('input', (e) => {
+                const masked = applyPhoneMask(e.target.value);
+                e.target.value = masked;
+            });
+            
+            // Open Add Member Modal
+            const openAddModal = () => {
+                addMemberModal.classList.remove('hidden');
+                addMemberModal.classList.add('flex');
+            };
+            
+            // Close Add Member Modal
+            const closeAddModal = () => {
+                addMemberModal.classList.add('hidden');
+                addMemberModal.classList.remove('flex');
+                addMemberForm.reset();
+            };
+            
+            // Show Toast Notification
+            const showToast = (message) => {
+                toastMessage.textContent = message;
+                toast.classList.remove('translate-y-20', 'opacity-0');
+                setTimeout(() => {
+                    toast.classList.add('translate-y-20', 'opacity-0');
+                }, 3000);
+            };
+            
+            // Render Members Grid
+            const renderMembers = () => {
+                memberCountSpan.textContent = members.length;
+                
+                if (members.length === 0) {
+                    emptyState.classList.remove('hidden');
+                    membersGrid.classList.add('hidden');
+                } else {
+                    emptyState.classList.add('hidden');
+                    membersGrid.classList.remove('hidden');
+                    
+                    membersGrid.innerHTML = members.map((member, index) => `
+                        <div class="bg-slate-800 rounded-xl p-5 border border-slate-700 hover:border-orange-500/50 transition-all group">
+                            <div class="flex items-start justify-between mb-3">
+                                <div class="flex items-center space-x-3">
+                                    <div class="h-12 w-12 rounded-full bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-white font-bold text-lg">
+                                        ${member.name.charAt(0).toUpperCase()}
+                                    </div>
+                                    <div>
+                                        <h4 class="font-semibold text-white">${member.name}</h4>
+                                        <p class="text-sm text-slate-400">${member.email}</p>
+                                    </div>
+                                </div>
+                                <div class="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button onclick="editMember(${index})" class="p-1.5 text-slate-400 hover:text-blue-400 transition-colors" title="Editar">
+                                        <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                                        </svg>
+                                    </button>
+                                    <button onclick="deleteMember(${index})" class="p-1.5 text-slate-400 hover:text-red-400 transition-colors" title="Remover">
+                                        <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="space-y-2 text-sm">
+                                <div class="flex items-center text-slate-400">
+                                    <svg class="h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z" />
+                                    </svg>
+                                    ${member.phone}
+                                </div>
+                                <div class="flex items-center text-slate-400">
+                                    <svg class="h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                                    </svg>
+                                    BI: ${member.bi}
+                                </div>
+                            </div>
+                            <div class="mt-4 flex items-center justify-between">
+                                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${member.role === 'Gestor' ? 'bg-blue-500/20 text-blue-400' : 'bg-orange-500/20 text-orange-400'}">
+                                    ${member.role}
+                                </span>
+                                <span class="text-xs text-slate-500">${new Date(member.createdAt).toLocaleDateString('pt-AO')}</span>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+                
+                // Save to localStorage
+                localStorage.setItem('flowin_members', JSON.stringify(members));
+            };
+            
+            // Add Member Function
+            const addMember = (e) => {
+                e.preventDefault();
+                
+                const name = document.getElementById('member-name').value.trim();
+                const email = document.getElementById('member-email').value.trim();
+                const phone = document.getElementById('member-phone').value.trim();
+                const bi = document.getElementById('member-bi').value.trim();
+                const role = document.getElementById('member-role').value;
+                const notes = document.getElementById('member-notes').value.trim();
+                
+                // Validate phone (9 digits)
+                const phoneNumbers = phone.replace(/\D/g, '');
+                if (phoneNumbers.length !== 9) {
+                    showToast('❌ O telemóvel deve ter 9 dígitos');
+                    return;
+                }
+                
+                const newMember = {
+                    name,
+                    email,
+                    phone,
+                    bi,
+                    role,
+                    notes,
+                    createdAt: new Date().toISOString()
+                };
+                
+                members.push(newMember);
+                renderMembers();
+                closeAddModal();
+                showToast('✅ Membro adicionado com sucesso!');
+            };
+            
+            // Delete Member Functions
+            window.deleteMember = (index) => {
+                memberToDelete = index;
+                deleteMemberNameSpan.textContent = members[index].name;
+                deleteModal.classList.remove('hidden');
+                deleteModal.classList.add('flex');
+            };
+            
+            const closeDeleteModal = () => {
+                deleteModal.classList.add('hidden');
+                deleteModal.classList.remove('flex');
+                memberToDelete = null;
+            };
+            
+            const confirmDelete = () => {
+                if (memberToDelete !== null) {
+                    members.splice(memberToDelete, 1);
+                    renderMembers();
+                    closeDeleteModal();
+                    showToast('🗑️ Membro removido com sucesso!');
+                }
+            };
+            
+            // Edit Member Function (placeholder for future implementation)
+            window.editMember = (index) => {
+                showToast('⚠️ Funcionalidade de edição em desenvolvimento');
+            };
+            
+            // Event Listeners - Add Member Modal
+            addMemberButton.addEventListener('click', openAddModal);
+            closeAddModalButton.addEventListener('click', closeAddModal);
+            cancelAddMemberButton.addEventListener('click', closeAddModal);
+            addMemberForm.addEventListener('submit', addMember);
+            
+            addMemberModal.addEventListener('click', (event) => {
+                if (event.target === addMemberModal) {
+                    closeAddModal();
                 }
             });
+            
+            // Event Listeners - Delete Modal
+            cancelDeleteButton.addEventListener('click', closeDeleteModal);
+            confirmDeleteButton.addEventListener('click', confirmDelete);
+            
+            deleteModal.addEventListener('click', (event) => {
+                if (event.target === deleteModal) {
+                    closeDeleteModal();
+                }
+            });
+            
+            // Initial render
+            renderMembers();
         });
     </script>
 </body>
