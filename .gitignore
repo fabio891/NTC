@@ -1,4 +1,3 @@
-```
 # Compiled and build artifacts
 *.pyc
 __pycache__/
@@ -29,20 +28,21 @@ venv/
 .vscode/
 .idea/
 
-# Coverage reports
+# System files
+.DS_Store
+Thumbs.db
+
+# Coverage
 coverage/
 htmlcov/
 .coverage
 
-# OS specific
-.DS_Store
-Thumbs.db
-
-# Distribution / packaging
+# Build directories
 dist/
 build/
 target/
 .gradle/
+
+# Python specific
 .mypy_cache/
 .pytest_cache/
-```
