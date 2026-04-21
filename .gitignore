@@ -4,14 +4,12 @@
 __pycache__/
 
 # Dependencies
-vendor/
 node_modules/
-composer.lock
+vendor/
 
 # Logs and temp files
 *.log
 *.tmp
-*.swp
 
 # Environment
 .env
@@ -22,7 +20,12 @@ composer.lock
 .vscode/
 .idea/
 
-# OS generated files
+# OS specific
 .DS_Store
 Thumbs.db
+
+# Build and distribution
+dist/
+build/
+target/
 ```
