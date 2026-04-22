@@ -46,10 +46,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $invoice_number = "{$tipo} {$series_year}/" . str_pad($next_number, 4, '0', STR_PAD_LEFT);
                 
                 // Inserir fatura
-                $sql = "INSERT INTO invoices (company_id, client_id, invoice_number, series_year, issue_date, due_date, subtotal, discount_amount, iva_amount, total_amount, status, notes, created_by) 
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                $sql = "INSERT INTO invoices (company_id, client_id, type, invoice_number, series_year, issue_date, due_date, subtotal, discount_amount, iva_amount, total_amount, status, notes, created_by) 
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
                 $stmt = $pdo->prepare($sql);
-                $stmt->execute([$empresa_id, $client_id, $invoice_number, $series_year, $issue_date, $due_date, $subtotal, $discount_amount, $iva_amount, $total_amount, $status, $notes, $created_by]);
+                $stmt->execute([$empresa_id, $client_id, $tipo, $invoice_number, $series_year, $issue_date, $due_date, $subtotal, $discount_amount, $iva_amount, $total_amount, $status, $notes, $created_by]);
                 
                 $invoice_id = $pdo->lastInsertId();
                 
@@ -57,10 +57,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $pdo->prepare("UPDATE companies SET next_invoice_number = next_invoice_number + 1 WHERE id = ?")->execute([$empresa_id]);
             } else {
                 $invoice_id = (int)$_POST['invoice_id'];
-                $sql = "UPDATE invoices SET client_id = ?, issue_date = ?, due_date = ?, subtotal = ?, discount_amount = ?, iva_amount = ?, total_amount = ?, status = ?, notes = ? 
+                $sql = "UPDATE invoices SET client_id = ?, type = ?, issue_date = ?, due_date = ?, subtotal = ?, discount_amount = ?, iva_amount = ?, total_amount = ?, status = ?, notes = ? 
                         WHERE id = ? AND company_id = ?";
                 $stmt = $pdo->prepare($sql);
-                $stmt->execute([$client_id, $issue_date, $due_date, $subtotal, $discount_amount, $iva_amount, $total_amount, $status, $notes, $invoice_id, $empresa_id]);
+                $stmt->execute([$client_id, $tipo, $issue_date, $due_date, $subtotal, $discount_amount, $iva_amount, $total_amount, $status, $notes, $invoice_id, $empresa_id]);
                 
                 // Eliminar itens existentes
                 $pdo->prepare("DELETE FROM invoice_items WHERE invoice_id = ?")->execute([$invoice_id]);
@@ -427,24 +427,30 @@ $produtos = $stmt_products->fetchAll();
 
     <script>
         // ==================== DADOS MOCKADOS ====================
-        const mockClients = [
-            { id: 1, name: "Supermercado Kero", nif: "500123456" },
-            { id: 2, name: "Candando Guiché", nif: "500234567" },
-            { id: 3, name: "Shoprite Angola", nif: "500345678" },
-            { id: 4, name: "Tangerina Lda", nif: "500456789" },
-            { id: 5, name: "Angoalco Distribuidora", nif: "500567890" }
-        ];
+        // Dados de clientes vindos do servidor PHP (já não é necessário array mock)
 
-        const mockProducts = [
-            { id: 1, name: "Refrigerante Cuca 330ml", price: 150.00, tax: 14 },
-            { id: 2, name: "Arroz Tio Lucas 5kg", price: 2500.00, tax: 14 },
-            { id: 3, name: "Óleo Alimentar 1L", price: 850.00, tax: 14 },
-            { id: 4, name: "Açúcar Refinado 1kg", price: 450.00, tax: 14 },
-            { id: 5, name: "Sal Marinho 500g", price: 200.00, tax: 14 },
-            { id: 6, name: "Serviço de Consultoria", price: 15000.00, tax: 14 }
-        ];
+        // Dados de produtos vindos do servidor PHP
+        const mockProducts = <?= json_encode($produtos) ?>;
 
-        let documents = JSON.parse(localStorage.getItem('flowin_documents')) || [];
+        // Dados dos documentos vindos do servidor PHP
+        let documents = <?= json_encode($faturas->map(function($f) {
+            return [
+                'id' => $f['id'],
+                'type' => $f['type'] ?? 'FT',
+                'number' => $f['invoice_number'],
+                'date' => $f['issue_date'],
+                'dueDate' => $f['due_date'],
+                'clientId' => $f['client_id'],
+                'clientName' => $f['client_name'] ?? 'Cliente Desconhecido',
+                'status' => $f['status'],
+                'notes' => $f['notes'],
+                'subtotal' => (float)$f['subtotal'],
+                'discount' => (float)$f['discount_amount'],
+                'iva' => (float)$f['iva_amount'],
+                'total' => (float)$f['total_amount'],
+                'items' => []
+            ];
+        })) ?>;
 
         // ==================== INICIALIZAÇÃO ====================
         document.addEventListener('DOMContentLoaded', () => {
@@ -478,7 +484,8 @@ $produtos = $stmt_products->fetchAll();
         // ==================== GESTÃO DE CLIENTES ====================
         function loadClients() {
             const select = document.getElementById('docClient');
-            mockClients.forEach(client => {
+            const clientes = <?= json_encode($clientes) ?>;
+            clientes.forEach(client => {
                 const option = document.createElement('option');
                 option.value = client.id;
                 option.textContent = `${client.name} - NIF: ${client.nif}`;
@@ -500,7 +507,7 @@ $produtos = $stmt_products->fetchAll();
 
             emptyState.classList.add('hidden');
             grid.innerHTML = docsToRender.map((doc, index) => {
-                const client = mockClients.find(c => c.id == doc.clientId) || { name: 'Cliente Desconhecido' };
+                const clientName = doc.clientName || 'Cliente Desconhecido';
                 const badgeClass = getBadgeClass(doc.type);
                 const typeName = getTypeName(doc.type);
                 
@@ -509,7 +516,7 @@ $produtos = $stmt_products->fetchAll();
                         <div class="flex items-start justify-between mb-4">
                             <div>
                                 <h3 class="text-lg font-bold text-white">${doc.number}</h3>
-                                <p class="text-slate-400 text-sm">${client.name}</p>
+                                <p class="text-slate-400 text-sm">${clientName}</p>
                             </div>
                             <span class="px-3 py-1 rounded-full text-xs font-semibold ${badgeClass}">${typeName}</span>
                         </div>
@@ -638,9 +645,8 @@ $produtos = $stmt_products->fetchAll();
             // Filter by search
             if (searchTerm) {
                 filtered = filtered.filter(doc => {
-                    const client = mockClients.find(c => c.id == doc.clientId);
                     return doc.number.toLowerCase().includes(searchTerm) || 
-                           (client && client.name.toLowerCase().includes(searchTerm));
+                           (doc.clientName && doc.clientName.toLowerCase().includes(searchTerm));
                 });
             }
             
@@ -741,7 +747,7 @@ $produtos = $stmt_products->fetchAll();
             documents.filter(d => sourceTypes.includes(d.type)).forEach(doc => {
                 const option = document.createElement('option');
                 option.value = doc.number;
-                option.textContent = `${doc.number} - ${mockClients.find(c => c.id == doc.clientId)?.name || 'Cliente'}`;
+                option.textContent = `${doc.number} - ${doc.clientName || 'Cliente'}`;
                 select.appendChild(option);
             });
         }
@@ -912,33 +918,57 @@ $produtos = $stmt_products->fetchAll();
             
             const totals = calculateTotals();
             const type = document.getElementById('docType').value;
+            const action = editingIndex !== null ? 'update' : 'create';
+            const invoiceId = editingIndex !== null ? documents[editingIndex].id : null;
             
-            const doc = {
-                type,
-                number: document.getElementById('docNumber').value,
-                date: document.getElementById('docDate').value,
-                dueDate: document.getElementById('docDueDate').value || null,
-                clientId: document.getElementById('docClient').value,
-                items: [...items],
-                paymentMethod: document.getElementById('paymentMethod').value || null,
-                status: document.getElementById('docStatus').value || null,
-                notes: document.getElementById('docNotes').value || null,
-                subtotal: totals.subtotal,
-                discount: totals.discount,
-                ivaBase: totals.ivaBase,
-                iva: totals.iva,
-                total: totals.total,
-                sourceDocument: document.getElementById('sourceDoc').value || null,
-                isDraft
-            };
+            // Preparar dados para envio ao servidor
+            const formData = new FormData();
+            formData.append('action', action);
+            formData.append('tipo', type);
+            formData.append('client_id', document.getElementById('docClient').value);
+            formData.append('issue_date', document.getElementById('docDate').value);
+            formData.append('due_date', document.getElementById('docDueDate').value || '');
+            formData.append('notes', document.getElementById('docNotes').value || '');
+            formData.append('status', document.getElementById('docStatus').value || 'draft');
+            formData.append('discount_amount', totals.discount);
             
-            if (editingIndex !== null) {
-                documents[editingIndex] = doc;
-            } else {
-                documents.push(doc);
+            if (invoiceId) {
+                formData.append('invoice_id', invoiceId);
             }
             
-            localStorage.setItem('flowin_documents', JSON.stringify(documents));
+            // Adicionar itens
+            items.forEach((item, index) => {
+                formData.append(`items[${index}][product_id]`, item.product_id || '');
+                formData.append(`items[${index}][description]`, item.description);
+                formData.append(`items[${index}][quantity]`, item.quantity);
+                formData.append(`items[${index}][unit_price]`, item.unit_price);
+                formData.append(`items[${index}][unit_cost]`, item.unit_cost || 0);
+                formData.append(`items[${index}][iva_rate]`, item.iva_rate);
+                formData.append(`items[${index}][subtotal]`, item.subtotal);
+                formData.append(`items[${index}][iva]`, item.iva);
+                formData.append(`items[${index}][total_amount]`, item.total_amount);
+            });
+            
+            // Enviar para o servidor
+            fetch(window.location.href, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.text())
+            .then(data => {
+                if (data.includes('sucesso')) {
+                    closeModal();
+                    // Recarregar a página para atualizar os dados do servidor
+                    window.location.reload();
+                } else {
+                    showToast('error', 'Erro ao salvar documento');
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                showToast('error', 'Erro de comunicação com o servidor');
+            });
+            
             return true;
         }
 
@@ -987,10 +1017,27 @@ $produtos = $stmt_products->fetchAll();
 
         function deleteDocument(index) {
             if (confirm('Tem certeza que deseja eliminar este documento?')) {
-                documents.splice(index, 1);
-                localStorage.setItem('flowin_documents', JSON.stringify(documents));
-                renderDocuments();
-                showToast('success', 'Documento eliminado');
+                const doc = documents[index];
+                const formData = new FormData();
+                formData.append('action', 'delete');
+                formData.append('invoice_id', doc.id);
+                
+                fetch(window.location.href, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.text())
+                .then(data => {
+                    if (data.includes('sucesso')) {
+                        window.location.reload();
+                    } else {
+                        showToast('error', 'Erro ao eliminar documento');
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro:', error);
+                    showToast('error', 'Erro de comunicação com o servidor');
+                });
             }
         }
 
