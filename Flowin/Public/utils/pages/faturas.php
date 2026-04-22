@@ -1,9 +1,130 @@
+<?php
+$pageTitle = 'Documentos Fiscais';
+require_once __DIR__ . '/../../../Includes/header.php';
+
+// Obter empresa_id da sessão
+$empresa_id = $_SESSION['empresa_id'];
+
+// Processar formulário de submissão
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+    $action = $_POST['action'];
+    
+    try {
+        if ($action === 'create' || $action === 'update') {
+            $pdo->beginTransaction();
+            
+            $tipo = $_POST['tipo'];
+            $client_id = (int)$_POST['client_id'];
+            $issue_date = $_POST['issue_date'];
+            $due_date = !empty($_POST['due_date']) ? $_POST['due_date'] : null;
+            $notes = $_POST['notes'] ?? '';
+            $status = $_POST['status'] ?? 'draft';
+            $created_by = $_SESSION['user_id'];
+            
+            // Calcular totais dos itens
+            $items = $_POST['items'] ?? [];
+            $subtotal = 0;
+            $discount_amount = 0;
+            $iva_amount = 0;
+            $total_amount = 0;
+            
+            foreach ($items as $item) {
+                $subtotal += (float)$item['subtotal'];
+                $iva_amount += (float)$item['iva'];
+            }
+            
+            $discount_amount = (float)($_POST['discount_amount'] ?? 0);
+            $total_amount = $subtotal - $discount_amount + $iva_amount;
+            
+            // Gerar número da fatura
+            if ($action === 'create') {
+                $series_year = date('Y');
+                $stmt = $pdo->prepare("SELECT next_invoice_number FROM companies WHERE id = ?");
+                $stmt->execute([$empresa_id]);
+                $company = $stmt->fetch();
+                $next_number = $company['next_invoice_number'];
+                $invoice_number = "{$tipo} {$series_year}/" . str_pad($next_number, 4, '0', STR_PAD_LEFT);
+                
+                // Inserir fatura
+                $sql = "INSERT INTO invoices (company_id, client_id, type, invoice_number, series_year, issue_date, due_date, subtotal, discount_amount, iva_amount, total_amount, status, notes, created_by) 
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute([$empresa_id, $client_id, $tipo, $invoice_number, $series_year, $issue_date, $due_date, $subtotal, $discount_amount, $iva_amount, $total_amount, $status, $notes, $created_by]);
+                
+                $invoice_id = $pdo->lastInsertId();
+                
+                // Atualizar próximo número da fatura
+                $pdo->prepare("UPDATE companies SET next_invoice_number = next_invoice_number + 1 WHERE id = ?")->execute([$empresa_id]);
+            } else {
+                $invoice_id = (int)$_POST['invoice_id'];
+                $sql = "UPDATE invoices SET client_id = ?, type = ?, issue_date = ?, due_date = ?, subtotal = ?, discount_amount = ?, iva_amount = ?, total_amount = ?, status = ?, notes = ? 
+                        WHERE id = ? AND company_id = ?";
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute([$client_id, $tipo, $issue_date, $due_date, $subtotal, $discount_amount, $iva_amount, $total_amount, $status, $notes, $invoice_id, $empresa_id]);
+                
+                // Eliminar itens existentes
+                $pdo->prepare("DELETE FROM invoice_items WHERE invoice_id = ?")->execute([$invoice_id]);
+            }
+            
+            // Inserir itens
+            foreach ($items as $item) {
+                $sql_item = "INSERT INTO invoice_items (invoice_id, product_id, description, quantity, unit_price, unit_cost, iva_rate, total_amount) 
+                             VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+                $stmt_item = $pdo->prepare($sql_item);
+                $stmt_item->execute([
+                    $invoice_id,
+                    $item['product_id'] ?? null,
+                    $item['description'],
+                    $item['quantity'],
+                    $item['unit_price'],
+                    $item['unit_cost'],
+                    $item['iva_rate'],
+                    $item['total_amount']
+                ]);
+            }
+            
+            $pdo->commit();
+            $success_message = $action === 'create' ? 'Documento criado com sucesso!' : 'Documento atualizado com sucesso!';
+        } elseif ($action === 'delete') {
+            $invoice_id = (int)$_POST['invoice_id'];
+            $pdo->prepare("DELETE FROM invoices WHERE id = ? AND company_id = ?")->execute([$invoice_id, $empresa_id]);
+            $success_message = 'Documento eliminado com sucesso!';
+        }
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        $error_message = 'Erro: ' . $e->getMessage();
+    }
+}
+
+// Obter todas as faturas da empresa
+$stmt = $pdo->prepare("
+    SELECT i.*, c.name AS client_name, u.name AS created_by_name
+    FROM invoices i
+    LEFT JOIN clients c ON i.client_id = c.id
+    LEFT JOIN users u ON i.created_by = u.id
+    WHERE i.company_id = ?
+    ORDER BY i.issue_date DESC, i.invoice_number DESC
+");
+$stmt->execute([$empresa_id]);
+$faturas = $stmt->fetchAll();
+
+// Obter clientes para o select
+$stmt_clients = $pdo->prepare("SELECT id, name, nif FROM clients WHERE company_id = ? AND status = 'active' ORDER BY name");
+$stmt_clients->execute([$empresa_id]);
+$clientes = $stmt_clients->fetchAll();
+
+// Obter produtos para o select
+$stmt_products = $pdo->prepare("SELECT id, name, price, cost, iva_rate FROM products WHERE company_id = ? AND status = 'active' ORDER BY name");
+$stmt_products->execute([$empresa_id]);
+$produtos = $stmt_products->fetchAll();
+?>
+
 <!DOCTYPE html>
 <html lang="pt-AO">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestão de Documentos Fiscais - FlowIn</title>
+    <title><?= htmlspecialchars($pageTitle) ?> - FlowIn</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
@@ -73,67 +194,6 @@
     </style>
 </head>
 <body class="text-slate-200 min-h-screen">
-    
-    <!-- Sidebar -->
-    <aside id="sidebar" class="fixed top-0 left-0 h-full w-64 bg-slate-800 border-r border-slate-700 z-50 transition-transform duration-300 transform -translate-x-full md:translate-x-0">
-        <div class="p-6 border-b border-slate-700">
-            <h1 class="text-2xl font-bold text-orange-500">FlowIn</h1>
-            <p class="text-xs text-slate-400 mt-1">Gestão Inteligente</p>
-        </div>
-        
-        <nav class="mt-6 px-4 space-y-2">
-            <a href="dashboard.php" class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-400 hover:bg-slate-700 hover:text-white transition-all">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
-                Dashboard
-            </a>
-            <a href="vendas.php" class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-400 hover:bg-slate-700 hover:text-white transition-all">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
-                Vendas
-            </a>
-            <a href="clients.php" class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-400 hover:bg-slate-700 hover:text-white transition-all">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-                Clientes
-            </a>
-            <a href="produtos.php" class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-400 hover:bg-slate-700 hover:text-white transition-all">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
-                Produtos
-            </a>
-            <a href="faturas.php" class="flex items-center gap-3 px-4 py-3 rounded-lg bg-orange-500/10 text-orange-500 border border-orange-500/20">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                Documentos Fiscais
-            </a>
-            <a href="despesa.php" class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-400 hover:bg-slate-700 hover:text-white transition-all">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                Despesas
-            </a>
-            <a href="relatorios.php" class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-400 hover:bg-slate-700 hover:text-white transition-all">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
-                Relatórios
-            </a>
-            <a href="utilizadores.php" class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-400 hover:bg-slate-700 hover:text-white transition-all">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
-                Equipa
-            </a>
-        </nav>
-        
-        <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-slate-700">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-full bg-orange-500 flex items-center justify-center text-white font-bold">BM</div>
-                <div>
-                    <p class="text-sm font-semibold text-white">Blu Marketing</p>
-                    <p class="text-xs text-slate-400">Admin</p>
-                </div>
-            </div>
-        </div>
-    </aside>
-    
-    <!-- Mobile Menu Button -->
-    <button id="mobile-menu-button" class="md:hidden fixed top-4 left-4 z-[60] p-2 bg-slate-800 rounded-lg text-slate-200">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
-    </button>
-    
-    <!-- Mobile Overlay -->
-    <div id="mobile-menu-overlay" class="md:hidden fixed inset-0 bg-black/50 z-[55] hidden"></div>
 
     <!-- Main Content -->
     <main class="md:ml-64 p-4 md:p-8 pt-20 md:pt-8">
@@ -367,24 +427,30 @@
 
     <script>
         // ==================== DADOS MOCKADOS ====================
-        const mockClients = [
-            { id: 1, name: "Supermercado Kero", nif: "500123456" },
-            { id: 2, name: "Candando Guiché", nif: "500234567" },
-            { id: 3, name: "Shoprite Angola", nif: "500345678" },
-            { id: 4, name: "Tangerina Lda", nif: "500456789" },
-            { id: 5, name: "Angoalco Distribuidora", nif: "500567890" }
-        ];
+        // Dados de clientes vindos do servidor PHP (já não é necessário array mock)
 
-        const mockProducts = [
-            { id: 1, name: "Refrigerante Cuca 330ml", price: 150.00, tax: 14 },
-            { id: 2, name: "Arroz Tio Lucas 5kg", price: 2500.00, tax: 14 },
-            { id: 3, name: "Óleo Alimentar 1L", price: 850.00, tax: 14 },
-            { id: 4, name: "Açúcar Refinado 1kg", price: 450.00, tax: 14 },
-            { id: 5, name: "Sal Marinho 500g", price: 200.00, tax: 14 },
-            { id: 6, name: "Serviço de Consultoria", price: 15000.00, tax: 14 }
-        ];
+        // Dados de produtos vindos do servidor PHP
+        const mockProducts = <?= json_encode($produtos) ?>;
 
-        let documents = JSON.parse(localStorage.getItem('flowin_documents')) || [];
+        // Dados dos documentos vindos do servidor PHP
+        let documents = <?= json_encode($faturas->map(function($f) {
+            return [
+                'id' => $f['id'],
+                'type' => $f['type'] ?? 'FT',
+                'number' => $f['invoice_number'],
+                'date' => $f['issue_date'],
+                'dueDate' => $f['due_date'],
+                'clientId' => $f['client_id'],
+                'clientName' => $f['client_name'] ?? 'Cliente Desconhecido',
+                'status' => $f['status'],
+                'notes' => $f['notes'],
+                'subtotal' => (float)$f['subtotal'],
+                'discount' => (float)$f['discount_amount'],
+                'iva' => (float)$f['iva_amount'],
+                'total' => (float)$f['total_amount'],
+                'items' => []
+            ];
+        })) ?>;
 
         // ==================== INICIALIZAÇÃO ====================
         document.addEventListener('DOMContentLoaded', () => {
@@ -418,7 +484,8 @@
         // ==================== GESTÃO DE CLIENTES ====================
         function loadClients() {
             const select = document.getElementById('docClient');
-            mockClients.forEach(client => {
+            const clientes = <?= json_encode($clientes) ?>;
+            clientes.forEach(client => {
                 const option = document.createElement('option');
                 option.value = client.id;
                 option.textContent = `${client.name} - NIF: ${client.nif}`;
@@ -440,7 +507,7 @@
 
             emptyState.classList.add('hidden');
             grid.innerHTML = docsToRender.map((doc, index) => {
-                const client = mockClients.find(c => c.id == doc.clientId) || { name: 'Cliente Desconhecido' };
+                const clientName = doc.clientName || 'Cliente Desconhecido';
                 const badgeClass = getBadgeClass(doc.type);
                 const typeName = getTypeName(doc.type);
                 
@@ -449,7 +516,7 @@
                         <div class="flex items-start justify-between mb-4">
                             <div>
                                 <h3 class="text-lg font-bold text-white">${doc.number}</h3>
-                                <p class="text-slate-400 text-sm">${client.name}</p>
+                                <p class="text-slate-400 text-sm">${clientName}</p>
                             </div>
                             <span class="px-3 py-1 rounded-full text-xs font-semibold ${badgeClass}">${typeName}</span>
                         </div>
@@ -578,9 +645,8 @@
             // Filter by search
             if (searchTerm) {
                 filtered = filtered.filter(doc => {
-                    const client = mockClients.find(c => c.id == doc.clientId);
                     return doc.number.toLowerCase().includes(searchTerm) || 
-                           (client && client.name.toLowerCase().includes(searchTerm));
+                           (doc.clientName && doc.clientName.toLowerCase().includes(searchTerm));
                 });
             }
             
@@ -681,7 +747,7 @@
             documents.filter(d => sourceTypes.includes(d.type)).forEach(doc => {
                 const option = document.createElement('option');
                 option.value = doc.number;
-                option.textContent = `${doc.number} - ${mockClients.find(c => c.id == doc.clientId)?.name || 'Cliente'}`;
+                option.textContent = `${doc.number} - ${doc.clientName || 'Cliente'}`;
                 select.appendChild(option);
             });
         }
@@ -852,33 +918,57 @@
             
             const totals = calculateTotals();
             const type = document.getElementById('docType').value;
+            const action = editingIndex !== null ? 'update' : 'create';
+            const invoiceId = editingIndex !== null ? documents[editingIndex].id : null;
             
-            const doc = {
-                type,
-                number: document.getElementById('docNumber').value,
-                date: document.getElementById('docDate').value,
-                dueDate: document.getElementById('docDueDate').value || null,
-                clientId: document.getElementById('docClient').value,
-                items: [...items],
-                paymentMethod: document.getElementById('paymentMethod').value || null,
-                status: document.getElementById('docStatus').value || null,
-                notes: document.getElementById('docNotes').value || null,
-                subtotal: totals.subtotal,
-                discount: totals.discount,
-                ivaBase: totals.ivaBase,
-                iva: totals.iva,
-                total: totals.total,
-                sourceDocument: document.getElementById('sourceDoc').value || null,
-                isDraft
-            };
+            // Preparar dados para envio ao servidor
+            const formData = new FormData();
+            formData.append('action', action);
+            formData.append('tipo', type);
+            formData.append('client_id', document.getElementById('docClient').value);
+            formData.append('issue_date', document.getElementById('docDate').value);
+            formData.append('due_date', document.getElementById('docDueDate').value || '');
+            formData.append('notes', document.getElementById('docNotes').value || '');
+            formData.append('status', document.getElementById('docStatus').value || 'draft');
+            formData.append('discount_amount', totals.discount);
             
-            if (editingIndex !== null) {
-                documents[editingIndex] = doc;
-            } else {
-                documents.push(doc);
+            if (invoiceId) {
+                formData.append('invoice_id', invoiceId);
             }
             
-            localStorage.setItem('flowin_documents', JSON.stringify(documents));
+            // Adicionar itens
+            items.forEach((item, index) => {
+                formData.append(`items[${index}][product_id]`, item.product_id || '');
+                formData.append(`items[${index}][description]`, item.description);
+                formData.append(`items[${index}][quantity]`, item.quantity);
+                formData.append(`items[${index}][unit_price]`, item.unit_price);
+                formData.append(`items[${index}][unit_cost]`, item.unit_cost || 0);
+                formData.append(`items[${index}][iva_rate]`, item.iva_rate);
+                formData.append(`items[${index}][subtotal]`, item.subtotal);
+                formData.append(`items[${index}][iva]`, item.iva);
+                formData.append(`items[${index}][total_amount]`, item.total_amount);
+            });
+            
+            // Enviar para o servidor
+            fetch(window.location.href, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.text())
+            .then(data => {
+                if (data.includes('sucesso')) {
+                    closeModal();
+                    // Recarregar a página para atualizar os dados do servidor
+                    window.location.reload();
+                } else {
+                    showToast('error', 'Erro ao salvar documento');
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                showToast('error', 'Erro de comunicação com o servidor');
+            });
+            
             return true;
         }
 
@@ -927,10 +1017,27 @@
 
         function deleteDocument(index) {
             if (confirm('Tem certeza que deseja eliminar este documento?')) {
-                documents.splice(index, 1);
-                localStorage.setItem('flowin_documents', JSON.stringify(documents));
-                renderDocuments();
-                showToast('success', 'Documento eliminado');
+                const doc = documents[index];
+                const formData = new FormData();
+                formData.append('action', 'delete');
+                formData.append('invoice_id', doc.id);
+                
+                fetch(window.location.href, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.text())
+                .then(data => {
+                    if (data.includes('sucesso')) {
+                        window.location.reload();
+                    } else {
+                        showToast('error', 'Erro ao eliminar documento');
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro:', error);
+                    showToast('error', 'Erro de comunicação com o servidor');
+                });
             }
         }
 
