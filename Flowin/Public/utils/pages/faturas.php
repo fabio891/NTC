@@ -126,28 +126,10 @@ if (isset($success_message)) {
 if (isset($error_message)) {
     $toast_messages[] = ['type' => 'error', 'message' => $error_message];
 }
-?>
 
-<!DOCTYPE html>
-<html lang="pt-AO">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= htmlspecialchars($pageTitle) ?> - FlowIn</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <style>
-        * { font-family: 'Inter', sans-serif; }
-        body { background-color: #0f172a; }
-        
-        /* Scrollbar customizada */
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-track { background: #1e293b; }
-        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #64748b; }
-        
-        /* Animações do Modal */
-        .modal-overlay {
+// Conteúdo principal da página
+ob_start();
+?>
             opacity: 0;
             visibility: hidden;
             transition: all 0.3s ease;
@@ -256,7 +238,7 @@ if (isset($error_message)) {
             </button>
         </div>
         
-    </main>
+    </div>
 
     <!-- Modal Novo/Editar Documento -->
     <div id="documentModal" class="modal-overlay fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 overflow-y-auto">
@@ -442,27 +424,41 @@ if (isset($error_message)) {
         const mockProducts = <?= json_encode($produtos) ?>;
 
         // Dados dos documentos vindos do servidor PHP
-        let documents = <?= json_encode($faturas->map(function($f) {
-            return [
-                'id' => $f['id'],
-                'type' => $f['type'] ?? 'FT',
-                'number' => $f['invoice_number'],
-                'date' => $f['issue_date'],
-                'dueDate' => $f['due_date'],
-                'clientId' => $f['client_id'],
-                'clientName' => $f['client_name'] ?? 'Cliente Desconhecido',
-                'status' => $f['status'],
-                'notes' => $f['notes'],
-                'subtotal' => (float)$f['subtotal'],
-                'discount' => (float)$f['discount_amount'],
-                'iva' => (float)$f['iva_amount'],
-                'total' => (float)$f['total_amount'],
-                'items' => []
-            ];
-        })) ?>;
+        const faturasData = <?= json_encode($faturas) ?>;
+        let documents = faturasData.map(f => {
+            return {
+                'id': f['id'],
+                'type': f['type'] ?? 'FT',
+                'number': f['invoice_number'],
+                'date': f['issue_date'],
+                'dueDate': f['due_date'],
+                'clientId': f['client_id'],
+                'clientName': f['client_name'] ?? 'Cliente Desconhecido',
+                'status': translateStatus(f['status']),
+                'notes': f['notes'],
+                'subtotal': parseFloat(f['subtotal']) || 0,
+                'discount': parseFloat(f['discount_amount']) || 0,
+                'iva': parseFloat(f['iva_amount']) || 0,
+                'total': parseFloat(f['total_amount']) || 0,
+                'items': []
+            };
+        });
 
         // Mensagens de toast vindas do servidor
         const serverToastMessages = <?= json_encode($toast_messages) ?>;
+
+        // Traduzir status do banco para português
+        function translateStatus(status) {
+            const statusMap = {
+                'draft': 'Rascunho',
+                'issued': 'Emitida',
+                'paid': 'Paga',
+                'partial': 'Parcial',
+                'cancelled': 'Cancelada',
+                'overdue': 'Vencida'
+            };
+            return statusMap[status] || status;
+        }
 
         // ==================== INICIALIZAÇÃO ====================
         document.addEventListener('DOMContentLoaded', () => {
@@ -975,13 +971,9 @@ if (isset($error_message)) {
             })
             .then(response => response.text())
             .then(data => {
-                if (data.includes('sucesso')) {
-                    closeModal();
-                    // Recarregar a página para atualizar os dados do servidor
-                    window.location.reload();
-                } else {
-                    showToast('error', 'Erro ao salvar documento');
-                }
+                closeModal();
+                // Recarregar a página para atualizar os dados do servidor
+                window.location.reload();
             })
             .catch(error => {
                 console.error('Erro:', error);
@@ -993,9 +985,7 @@ if (isset($error_message)) {
 
         function saveDraft() {
             if (saveDocument(true)) {
-                closeModal();
-                renderDocuments();
-                showToast('success', 'Rascunho guardado com sucesso');
+                // O reload será feito pelo saveDocument
             }
         }
 
@@ -1010,18 +1000,8 @@ if (isset($error_message)) {
             spinner.classList.remove('hidden');
             btnText.textContent = 'A emitir...';
             
-            // Simulate API call
-            setTimeout(() => {
-                if (saveDocument(false)) {
-                    closeModal();
-                    renderDocuments();
-                    showToast('success', 'Documento emitido com sucesso!');
-                }
-                
-                btn.disabled = false;
-                spinner.classList.add('hidden');
-                btnText.textContent = 'Emitir Documento';
-            }, 1000);
+            // O saveDocument já faz o reload
+            saveDocument(false);
         }
 
         // ==================== DOCUMENT ACTIONS ====================
@@ -1047,15 +1027,11 @@ if (isset($error_message)) {
                 })
                 .then(response => response.text())
                 .then(data => {
-                    if (data.includes('sucesso')) {
-                        window.location.reload();
-                    } else {
-                        showToast('error', 'Erro ao eliminar documento');
-                    }
+                    window.location.reload();
                 })
                 .catch(error => {
                     console.error('Erro:', error);
-                    showToast('error', 'Erro de comunicação com o servidor');
+                    showToast('error', 'Erro ao eliminar documento');
                 });
             }
         }
@@ -1064,19 +1040,41 @@ if (isset($error_message)) {
             const pf = documents[index];
             
             if (confirm('Converter esta Pró-forma em Fatura? Será criado um novo documento.')) {
-                const invoice = {
-                    ...pf,
-                    type: 'FT',
-                    number: getNextDocumentNumber('FT'),
-                    date: new Date().toISOString().split('T')[0],
-                    status: 'Pendente',
-                    sourceDocument: pf.number
-                };
+                const formData = new FormData();
+                formData.append('action', 'create');
+                formData.append('tipo', 'FT');
+                formData.append('client_id', pf.clientId);
+                formData.append('issue_date', new Date().toISOString().split('T')[0]);
+                formData.append('due_date', pf.dueDate || '');
+                formData.append('status', 'issued');
+                formData.append('notes', 'Convertido da Pró-forma ' + pf.number);
+                formData.append('discount_amount', pf.discount);
                 
-                documents.push(invoice);
-                localStorage.setItem('flowin_documents', JSON.stringify(documents));
-                renderDocuments();
-                showToast('success', 'Pró-forma convertida em Fatura com sucesso!');
+                // Adicionar itens se existirem
+                pf.items.forEach((item, i) => {
+                    formData.append(`items[${i}][product_id]`, item.productId || '');
+                    formData.append(`items[${i}][description]`, item.description);
+                    formData.append(`items[${i}][quantity]`, item.quantity);
+                    formData.append(`items[${i}][unit_price]`, item.unitPrice);
+                    formData.append(`items[${i}][unit_cost]`, item.unitCost || 0);
+                    formData.append(`items[${i}][iva_rate]`, item.ivaRate);
+                    formData.append(`items[${i}][subtotal]`, item.subtotal);
+                    formData.append(`items[${i}][iva]`, item.iva);
+                    formData.append(`items[${i}][total_amount]`, item.totalAmount);
+                });
+                
+                fetch(window.location.href, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.text())
+                .then(data => {
+                    window.location.reload();
+                })
+                .catch(error => {
+                    console.error('Erro:', error);
+                    showToast('error', 'Erro ao converter documento');
+                });
             }
         }
 
@@ -1084,21 +1082,40 @@ if (isset($error_message)) {
             const invoice = documents[index];
             
             if (confirm('Gerar Recibo associado a esta Fatura?')) {
-                const receipt = {
-                    ...invoice,
-                    type: 'RE',
-                    number: getNextDocumentNumber('RE'),
-                    date: new Date().toISOString().split('T')[0],
-                    dueDate: null,
-                    status: null,
-                    sourceDocument: invoice.number,
-                    paymentMethod: invoice.paymentMethod
-                };
+                const formData = new FormData();
+                formData.append('action', 'create');
+                formData.append('tipo', 'RE');
+                formData.append('client_id', invoice.clientId);
+                formData.append('issue_date', new Date().toISOString().split('T')[0]);
+                formData.append('status', 'paid');
+                formData.append('notes', 'Recibo da Fatura ' + invoice.number);
+                formData.append('discount_amount', 0);
                 
-                documents.push(receipt);
-                localStorage.setItem('flowin_documents', JSON.stringify(documents));
-                renderDocuments();
-                showToast('success', 'Recibo gerado com sucesso!');
+                // Adicionar itens
+                invoice.items.forEach((item, i) => {
+                    formData.append(`items[${i}][product_id]`, item.productId || '');
+                    formData.append(`items[${i}][description]`, item.description);
+                    formData.append(`items[${i}][quantity]`, item.quantity);
+                    formData.append(`items[${i}][unit_price]`, item.unitPrice);
+                    formData.append(`items[${i}][unit_cost]`, item.unitCost || 0);
+                    formData.append(`items[${i}][iva_rate]`, item.ivaRate);
+                    formData.append(`items[${i}][subtotal]`, item.subtotal);
+                    formData.append(`items[${i}][iva]`, item.iva);
+                    formData.append(`items[${i}][total_amount]`, item.totalAmount);
+                });
+                
+                fetch(window.location.href, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.text())
+                .then(data => {
+                    window.location.reload();
+                })
+                .catch(error => {
+                    console.error('Erro:', error);
+                    showToast('error', 'Erro ao gerar recibo');
+                });
             }
         }
 
@@ -1137,5 +1154,5 @@ if (isset($error_message)) {
         }
 
     </script>
-</body>
-</html>
+    
+<?php require_once __DIR__ . '/../../../Includes/footer.php'; ?>
