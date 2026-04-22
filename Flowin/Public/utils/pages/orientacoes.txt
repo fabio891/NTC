@@ -6,6 +6,10 @@ Este documento descreve a estrutura da base de dados do FlowIn, os vínculos ent
 as tabelas (chaves estrangeiras) e orientações para implementar consultas e
 operações de inserção/atualização nas páginas PHP.
 
+A definição completa das tabelas, colunas e tipos de dados encontra-se no arquivo
+`tabelas.txt` localizado na raiz do projeto. Consulte esse arquivo para obter
+os esquemas exatos de cada tabela.
+
 ================================================================================
 1. CONCEITO MULTI-TENANCY (EMPRESA ÚNICA POR ASSINATURA)
 ================================================================================
@@ -16,135 +20,24 @@ Em todas as consultas, deve-se filtrar por `company_id` da sessão:
     $_SESSION['empresa_id']   // Obtido após o login, armazenado em auth.php
 
 ================================================================================
-2. TABELAS PRINCIPAIS
+2. VISÃO GERAL DAS TABELAS (ESQUEMA NO ARQUIVO tabelas.txt)
 ================================================================================
+As tabelas principais do sistema são:
 
-2.1. companies
---------------------------------------------------------------------------------
-Função:       Armazena os dados da empresa assinante (multi-tenancy).
-Colunas:      id (PK), name, nif, currency, invoice_series, created_at
-Vínculos:     Nenhum (tabela raiz)
-Preenchimento: Criada durante o registo da empresa (onboarding).
-              currency padrão: 'AOA'
-              invoice_series padrão: 'FT'
+- companies
+- users
+- clients
+- products
+- invoices
+- invoice_items
+- sales
+- expenses
+- payments
 
-2.2. users
---------------------------------------------------------------------------------
-Função:       Utilizadores do sistema (admin, vendedor, financeiro, etc.)
-Colunas:      id (PK), company_id (FK), name, email, password (hash),
-              role (ENUM: 'admin','gestor','financeiro','comercial','operacional','staff'),
-              created_at
-Vínculos:     company_id → companies.id
-Preenchimento:
-              - password: usar password_hash($senha, PASSWORD_DEFAULT)
-              - role: 'admin' para o primeiro utilizador; os demais podem ser 'staff'
-Consulta típica (listar utilizadores da empresa):
-    SELECT id, name, email, role FROM users WHERE company_id = ? ORDER BY name
-
-2.3. clients
---------------------------------------------------------------------------------
-Função:       Cadastro de clientes (pessoas ou empresas)
-Colunas:      id (PK), company_id (FK), name, nif, phone, address, credit_limit,
-              created_at
-Vínculos:     company_id → companies.id
-Preenchimento:
-              - credit_limit: decimal(10,2), padrão 0.00
-              - phone: formato angolano (9XX XXX XXX)
-Consulta para preencher <select> em vendas/faturas:
-    SELECT id, name FROM clients WHERE company_id = ? ORDER BY name
-
-2.4. products
---------------------------------------------------------------------------------
-Função:       Catálogo de produtos e controlo de stock
-Colunas:      id (PK), company_id (FK), name, barcode, sale_price, purchase_cost,
-              current_stock, min_stock, category, created_at
-Vínculos:     company_id → companies.id
-Preenchimento:
-              - current_stock: inteiro, atualizado a cada venda ou entrada de stock
-              - min_stock: inteiro, para alertas de stock baixo
-              - barcode: string única por empresa (pode-se adicionar UNIQUE KEY)
-Consulta para select de produtos:
-    SELECT id, name, sale_price, current_stock FROM products
-    WHERE company_id = ? AND current_stock > 0 ORDER BY name
-
-2.5. invoices
---------------------------------------------------------------------------------
-Função:       Cabeçalho das faturas emitidas (ou pró-formas, recibos, etc.)
-Colunas:      id (PK), company_id (FK), client_id (FK), created_by (FK para users.id),
-              invoice_number, invoice_date, due_date, subtotal, tax, total,
-              status (ENUM: 'pendente','emitida','parcial','paga','cancelada'),
-              type (ENUM: 'FT','PF','RE','NC','ND'),  -- opcional, para tipo de documento
-              created_at
-Vínculos:     company_id → companies.id
-              client_id  → clients.id
-              created_by → users.id
-Preenchimento:
-              - invoice_number: gerado automaticamente (ex: FT 2025/001)
-              - subtotal, tax, total: calculados a partir dos itens
-              - status inicial: 'emitida' ou 'pendente'
-Consulta para listar faturas:
-    SELECT i.id, i.invoice_number, i.invoice_date, i.total, i.status,
-           c.name AS client_name
-    FROM invoices i
-    INNER JOIN clients c ON i.client_id = c.id
-    WHERE i.company_id = ?
-    ORDER BY i.invoice_date DESC
-
-2.6. invoice_items
---------------------------------------------------------------------------------
-Função:       Itens individuais de uma fatura
-Colunas:      id (PK), invoice_id (FK), product_id (FK),
-              quantity, unit_price, unit_cost, tax_rate, line_total
-Vínculos:     invoice_id → invoices.id  (ON DELETE CASCADE)
-              product_id → products.id
-Preenchimento:
-              - unit_price: preço de venda no momento da fatura
-              - unit_cost: custo de compra no momento (para cálculo de lucro)
-              - line_total = quantity * unit_price
-Inserção (exemplo):
-    INSERT INTO invoice_items (invoice_id, product_id, quantity, unit_price, unit_cost, tax_rate, line_total)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-
-2.7. sales
---------------------------------------------------------------------------------
-Função:       Registo consolidado de vendas para dashboard e relatórios rápidos
-Colunas:      id (PK), company_id (FK), invoice_id (FK, opcional), client_id (FK),
-              total_amount, total_cost, gross_profit, payment_method, created_at
-Vínculos:     company_id → companies.id
-              invoice_id → invoices.id (pode ser NULL se for venda direta sem fatura)
-              client_id  → clients.id
-Preenchimento:
-              - total_amount: soma dos itens da venda
-              - total_cost: soma dos custos dos itens (para calcular lucro)
-              - gross_profit = total_amount - total_cost
-              - payment_method: 'MCX Express','Transferência','TPA','Cash', etc.
-Inserção após concluir uma venda:
-    INSERT INTO sales (company_id, invoice_id, client_id, total_amount, total_cost, gross_profit, payment_method)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-
-2.8. expenses
---------------------------------------------------------------------------------
-Função:       Registo de despesas operacionais
-Colunas:      id (PK), company_id (FK), description, amount, category, status,
-              due_date, recurrence, created_at
-Vínculos:     company_id → companies.id
-Preenchimento:
-              - category: ex: 'Renda','Salários','Serviços','Material', etc.
-              - status: 'pago' ou 'pendente'
-              - recurrence: 'none','monthly','yearly'
-Consulta para listar despesas:
-    SELECT * FROM expenses WHERE company_id = ? ORDER BY due_date DESC
-
-2.9. payments (tabela complementar)
---------------------------------------------------------------------------------
-Função:       Registo de pagamentos parciais de faturas
-Colunas:      id (PK), invoice_id (FK), amount, payment_date, method, notes
-Vínculos:     invoice_id → invoices.id
-Preenchimento:
-              - amount: valor pago nesta parcela
-              - method: mesmo estilo de payment_method
-Observação:   Usada para controlar faturas pagas em prestações. O status da fatura
-              pode ser atualizado para 'parcial' ou 'paga' conforme a soma dos pagamentos.
+Para detalhes sobre nomes exatos de colunas, tipos de dados, valores padrão e
+restrições, consulte o arquivo `tabelas.txt`. Abaixo são fornecidos apenas os
+vínculos e exemplos de consultas que devem ser adaptados de acordo com a
+estrutura real definida nesse arquivo.
 
 ================================================================================
 3. VIEWS AUXILIARES
@@ -152,7 +45,7 @@ Observação:   Usada para controlar faturas pagas em prestações. O status da 
 
 3.1. view_low_stock
 --------------------------------------------------------------------------------
-Definição esperada:
+Definição esperada (consistente com `tabelas.txt`):
     CREATE VIEW view_low_stock AS
     SELECT p.id, p.company_id, p.name, p.current_stock, p.min_stock,
            (p.min_stock - p.current_stock) AS faltante
@@ -186,7 +79,7 @@ $stmt = $pdo->prepare("SELECT id, name, sale_price FROM products WHERE company_i
 $stmt->execute([$_SESSION['empresa_id']]);
 $produtos = $stmt->fetchAll();
 
-4.2. Inserção de um novo cliente
+4.2. Inserção de um novo cliente (ajuste os nomes das colunas conforme `tabelas.txt`)
 --------------------------------------------------------------------------------
 $sql = "INSERT INTO clients (company_id, name, nif, phone, address) VALUES (?, ?, ?, ?, ?)";
 $stmt = $pdo->prepare($sql);
@@ -222,8 +115,6 @@ relatorios.php      | view_profit_report, sales        | SELECT com filtros de d
 utilizadores.php    | users                            | SELECT, INSERT, UPDATE
 flow.php            | products (por barcode)           | SELECT (atualização rápida)
 
-
-
 ================================================================================
 6. PADRONIZAÇÃO DA INCLUSÃO DE CABEÇALHO E TÍTULO DINÂMICO
 ================================================================================
@@ -246,6 +137,11 @@ Substituir todo o conteúdo desde o início do ficheiro até à abertura do <bod
     //   - Abertura das tags HTML, head, body e a sidebar (se aplicável)
     ?>
 
+**Nota sobre os caminhos:** Como as páginas estão localizadas dentro de
+`Public/utils/pages/`, o caminho `../../../Includes/header.php` sobe três níveis
+até a raiz do projeto e acessa a pasta `Includes`. Ajuste conforme a estrutura
+real do seu projeto.
+
 O ficheiro `header.php` deve ser responsável por:
 - Iniciar a sessão e verificar autenticação.
 - Definir o título da página (<title>) usando a variável `$pageTitle`.
@@ -255,6 +151,7 @@ O ficheiro `header.php` deve ser responsável por:
 
 6.2. Exemplo de header.php (versão simplificada)
 --------------------------------------------------------------------------------
+```php
 <?php
 session_start();
 require_once __DIR__ . '/../Config/database.php';
@@ -276,52 +173,49 @@ $pageTitle = $pageTitle ?? 'FlowIn';
 <body class="bg-slate-900 text-slate-300 antialiased">
     <?php include __DIR__ . '/sidebar.php'; ?>
     <main class="flex-1 h-screen overflow-y-auto md:ml-64 pb-12">
-
 6.3. Remoção do Header Estático das Páginas
---------------------------------------------------------------------------------
+
 As páginas originais (.html convertidas para .php) possuíam todo o HTML do
-cabeçalho duplicado. Este conteúdo deve ser **removido** e substituído apenas
-pelas linhas indicadas em 7.1. O conteúdo específico da página (títulos, cards,
+cabeçalho duplicado. Este conteúdo deve ser removido e substituído apenas
+pelas linhas indicadas em 6.1. O conteúdo específico da página (títulos, cards,
 tabelas, etc.) deve ser colocado logo após o bloco de inclusão.
 
 Exemplo para dashboard.php:
 
-    <?php
-    $pageTitle = 'Dashboard';
-    require_once __DIR__ . '/../../../Includes/header.php';
-    ?>
-
-    <!-- Conteúdo específico do Dashboard -->
-    <div class="p-4 sm:p-6 md:p-8">
-        <h1 class="text-3xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
-            Bem-vindo, <?= htmlspecialchars($usuario['nome']) ?>
-        </h1>
-        <!-- Cards, gráficos, etc. -->
-    </div>
-
-    <?php require_once __DIR__ . '/../../../Includes/footer.php'; ?>
-
+<?php $pageTitle = 'Dashboard'; require_once __DIR__ . '/../../../Includes/header.php'; ?> <!-- Conteúdo específico do Dashboard --> <div class="p-4 sm:p-6 md:p-8"> <h1 class="text-3xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent"> Bem-vindo, <?= htmlspecialchars($usuario['nome']) ?> </h1> <!-- Cards, gráficos, etc. --> </div> <?php require_once __DIR__ . '/../../../Includes/footer.php'; ?>
 6.4. Benefícios Desta Abordagem
---------------------------------------------------------------------------------
-- Manutenção simplificada: alterações no cabeçalho afetam todas as páginas.
-- Consistência visual garantida.
-- Redução de código duplicado.
-- Facilidade para adicionar novas meta tags, scripts ou estilos globais.
-- O título da página é definido dinamicamente e aparece na aba do navegador.
+
+Manutenção simplificada: alterações no cabeçalho afetam todas as páginas.
+
+Consistência visual garantida.
+
+Redução de código duplicado.
+
+Facilidade para adicionar novas meta tags, scripts ou estilos globais.
+
+O título da página é definido dinamicamente e aparece na aba do navegador.
 
 ================================================================================
-7. OBSERVAÇÕES FINAIS 
+7. OBSERVAÇÕES FINAIS
 ================================================================================
-- Em todas as páginas, aplicar a estrutura descrita na seção 6.
-- Certificar-se de que o ficheiro `header.php` está corretamente configurado.
-- As views devem ser criadas no banco antes de serem usadas nas páginas.
-- Em produção, desative a exibição de erros PDO (use try/catch e logging).
-- O ficheiro `footer.php` deve fechar o `<main>` e o `<body>`, e incluir o rodapé fixo.
-- Todos os valores monetários devem ser armazenados como DECIMAL(10,2).
-- Datas devem ser tratadas com o formato MySQL (YYYY-MM-DD).
-- As views devem ser criadas no banco antes de serem usadas nas páginas.
 
+Em todas as páginas, aplicar a estrutura descrita na seção 6.
 
+Certificar-se de que o ficheiro header.php está corretamente configurado.
+
+As views devem ser criadas no banco antes de serem usadas nas páginas.
+
+Em produção, desative a exibição de erros PDO (use try/catch e logging).
+
+O ficheiro footer.php deve fechar o <main> e o <body>, e incluir o rodapé fixo.
+
+Todos os valores monetários devem ser armazenados como DECIMAL(10,2).
+
+Datas devem ser tratadas com o formato MySQL (YYYY-MM-DD).
+
+A estrutura exata das tabelas e colunas está definida em tabelas.txt.
+Sempre que escrever consultas SQL, consulte esse arquivo para garantir os nomes
+corretos dos campos.
 
 Fim do documento.
 ================================================================================
