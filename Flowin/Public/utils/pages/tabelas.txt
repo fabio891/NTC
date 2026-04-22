@@ -95,6 +95,7 @@ CREATE TABLE invoices (
     id INT AUTO_INCREMENT PRIMARY KEY,
     company_id INT NOT NULL,
     client_id INT NOT NULL,
+    type ENUM('FT', 'PF', 'RE', 'NC', 'ND') DEFAULT 'FT',
     invoice_number VARCHAR(50) NOT NULL, -- Ex: FT 2024/0001
     series_year VARCHAR(4) NOT NULL,
     issue_date DATE NOT NULL,
