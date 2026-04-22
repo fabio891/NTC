@@ -1,0 +1,286 @@
+-- ============================================================
+-- FLOWIN DATABASE SETUP - MULTI-TENANCY
+-- Compatível: PostgreSQL, MySQL, MariaDB
+-- ============================================================
+
+-- 1. Criação da Base de Dados
+CREATE DATABASE IF NOT EXISTS flowin_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE flowin_db;
+
+-- ============================================================
+-- 2. ESTRUTURA DAS TABELAS (SCHEMA)
+-- ============================================================
+
+-- Tabela: Companies (Empresas/Tenants)
+CREATE TABLE companies (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    nif VARCHAR(50) UNIQUE NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    phone VARCHAR(50),
+    address TEXT,
+    currency_code VARCHAR(3) DEFAULT 'AOA',
+    default_iva DECIMAL(5,2) DEFAULT 14.00,
+    invoice_series_prefix VARCHAR(10) DEFAULT 'FT',
+    next_invoice_number INT DEFAULT 1,
+    status ENUM('active', 'inactive', 'suspended') DEFAULT 'active',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_nif (nif),
+    INDEX idx_status (status)
+);
+
+-- Tabela: Users (Utilizadores do Sistema)
+CREATE TABLE users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    company_id INT NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    password_hash VARCHAR(255) NOT NULL, -- Na prática, guardar hash bcrypt
+    role ENUM('admin', 'manager', 'cashier', 'accountant') DEFAULT 'cashier',
+    status ENUM('active', 'inactive', 'blocked') DEFAULT 'active',
+    last_login TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE,
+    INDEX idx_company_user (company_id, email),
+    INDEX idx_role (role)
+);
+
+-- Tabela: Clients (Clientes)
+CREATE TABLE clients (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    company_id INT NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    type ENUM('person', 'company') DEFAULT 'person',
+    document VARCHAR(50), -- NIF ou BI
+    email VARCHAR(255),
+    phone VARCHAR(50),
+    address_street VARCHAR(255),
+    address_city VARCHAR(100),
+    address_province VARCHAR(100),
+    credit_limit DECIMAL(15,2) DEFAULT 0.00,
+    status ENUM('active', 'inactive', 'blocked') DEFAULT 'active',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE,
+    INDEX idx_company_client (company_id, name),
+    INDEX idx_document (document)
+);
+
+-- Tabela: Products (Produtos)
+CREATE TABLE products (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    company_id INT NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    code VARCHAR(50), -- Código interno
+    barcode VARCHAR(100), -- Código de barras
+    description TEXT,
+    price DECIMAL(15,2) NOT NULL,
+    cost DECIMAL(15,2) NOT NULL, -- Custo médio para cálculo de lucro
+    stock INT DEFAULT 0,
+    min_stock INT DEFAULT 10,
+    category VARCHAR(100),
+    unit ENUM('un', 'kg', 'lt', 'cx', 'svc') DEFAULT 'un',
+    iva_rate DECIMAL(5,2) DEFAULT 14.00,
+    status ENUM('active', 'inactive', 'discontinued') DEFAULT 'active',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE,
+    INDEX idx_company_prod (company_id, name),
+    INDEX idx_barcode (barcode),
+    INDEX idx_stock (stock)
+);
+
+-- Tabela: Invoices (Faturas)
+CREATE TABLE invoices (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    company_id INT NOT NULL,
+    client_id INT NOT NULL,
+    invoice_number VARCHAR(50) NOT NULL, -- Ex: FT 2024/0001
+    series_year VARCHAR(4) NOT NULL,
+    issue_date DATE NOT NULL,
+    due_date DATE,
+    subtotal DECIMAL(15,2) NOT NULL,
+    discount_amount DECIMAL(15,2) DEFAULT 0.00,
+    iva_amount DECIMAL(15,2) NOT NULL,
+    total_amount DECIMAL(15,2) NOT NULL,
+    status ENUM('draft', 'issued', 'paid', 'partial', 'cancelled', 'overdue') DEFAULT 'draft',
+    notes TEXT,
+    created_by INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE,
+    FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE RESTRICT,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+    UNIQUE KEY unique_invoice_number (company_id, invoice_number),
+    INDEX idx_company_inv (company_id, issue_date),
+    INDEX idx_status (status)
+);
+
+-- Tabela: Invoice Items (Itens da Fatura)
+CREATE TABLE invoice_items (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    invoice_id INT NOT NULL,
+    product_id INT, -- Pode ser null se for serviço descritivo
+    description VARCHAR(255) NOT NULL,
+    quantity DECIMAL(15,2) NOT NULL,
+    unit_price DECIMAL(15,2) NOT NULL, -- Preço no momento da venda (snapshot)
+    unit_cost DECIMAL(15,2) NOT NULL, -- Custo no momento (para lucro histórico)
+    iva_rate DECIMAL(5,2) DEFAULT 14.00,
+    total_amount DECIMAL(15,2) NOT NULL,
+    FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE,
+    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE SET NULL,
+    INDEX idx_invoice (invoice_id)
+);
+
+-- Tabela: Sales (Vendas - Resumo para Dashboard/Rapidez)
+-- Nota: Em sistemas complexos, isto pode ser uma View baseada nas faturas pagas
+CREATE TABLE sales (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    company_id INT NOT NULL,
+    invoice_id INT, -- Opcional, se a venda não gerar fatura imediata
+    client_id INT,
+    sale_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    subtotal DECIMAL(15,2) NOT NULL,
+    iva_amount DECIMAL(15,2) NOT NULL,
+    discount_amount DECIMAL(15,2) DEFAULT 0.00,
+    total_amount DECIMAL(15,2) NOT NULL,
+    total_cost_of_goods DECIMAL(15,2) NOT NULL, -- Soma dos custos dos itens
+    gross_profit DECIMAL(15,2) GENERATED ALWAYS AS (total_amount - total_cost_of_goods) STORED,
+    payment_method ENUM('cash', 'transfer', 'card', 'mcx', 'credit') DEFAULT 'cash',
+    status ENUM('completed', 'refunded', 'pending') DEFAULT 'completed',
+    created_by INT,
+    FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE,
+    FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE SET NULL,
+    FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE SET NULL,
+    INDEX idx_company_sale (company_id, sale_date)
+);
+
+-- Tabela: Payments (Pagamentos Recebidos)
+CREATE TABLE payments (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    company_id INT NOT NULL,
+    invoice_id INT NOT NULL,
+    client_id INT NOT NULL,
+    amount DECIMAL(15,2) NOT NULL,
+    payment_method ENUM('cash', 'transfer', 'card', 'mcx') NOT NULL,
+    reference VARCHAR(100), -- Ref bancária ou ID transação
+    payment_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    notes TEXT,
+    confirmed_by INT,
+    FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE,
+    FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE,
+    FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE,
+    FOREIGN KEY (confirmed_by) REFERENCES users(id) ON DELETE SET NULL,
+    INDEX idx_invoice_pay (invoice_id)
+);
+
+-- Tabela: Expenses (Despesas)
+CREATE TABLE expenses (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    company_id INT NOT NULL,
+    description VARCHAR(255) NOT NULL,
+    amount DECIMAL(15,2) NOT NULL,
+    category ENUM('rent', 'utilities', 'salaries', 'marketing', 'supplies', 'maintenance', 'other') NOT NULL,
+    status ENUM('pending', 'paid', 'overdue') DEFAULT 'pending',
+    is_recurring BOOLEAN DEFAULT FALSE,
+    due_date DATE,
+    paid_date DATE,
+    receipt_image VARCHAR(255),
+    created_by INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+    INDEX idx_company_exp (company_id, category),
+    INDEX idx_due_date (due_date)
+);
+
+-- ============================================================
+-- 3. INSERÇÃO DE DADOS FICTÍCIOS (SEED DATA)
+-- ============================================================
+
+-- A. Criar Empresa "Supermercado Kwanza"
+INSERT INTO companies (name, nif, email, phone, address, default_iva, invoice_series_prefix, next_invoice_number)
+VALUES 
+('Supermercado Kwanza', '500123456LA', 'admin@kwanza.ao', '+244 923 000 000', 'Rua Rainha Ginga, 100, Luanda', 14.00, 'FT', 1001);
+
+-- B. Criar Utilizador Admin
+-- Password fictícia: 'admin123' (Num sistema real, usar hash)
+INSERT INTO users (company_id, name, email, password_hash, role, status)
+VALUES 
+(1, 'João Manuel', 'joao@kwanza.ao', '$2y$10$dummyhashforadmin123', 'admin', 'active');
+
+-- C. Criar Clientes
+INSERT INTO clients (company_id, name, type, document, email, phone, address_city, credit_limit)
+VALUES 
+(1, 'Restaurante Sabores de Angola', 'company', '500987654LA', 'compras@sabores.ao', '+244 923 111 222', 'Luanda', 50000.00),
+(1, 'Ana Paula Costa', 'person', '004829102LA042', 'ana.costa@email.com', '+244 912 999 888', 'Benguela', 0.00),
+(1, 'Construtora Leste', 'company', '500555666LA', 'fin@construtoraleste.ao', '+244 933 444 555', 'Luanda', 150000.00);
+
+-- D. Criar Produtos
+INSERT INTO products (company_id, name, code, barcode, price, cost, stock, min_stock, category, unit)
+VALUES 
+(1, 'Refrigerante Cuca 330ml', 'BEB-CUCA-33', '5600123456789', 150.00, 90.00, 500, 100, 'Bebidas', 'un'),
+(1, 'Óleo Alimentar Fula 1L', 'MER-FULA-1L', '5600987654321', 1200.00, 850.00, 45, 50, 'Mercearia', 'un'),
+(1, 'Arroz Tio Lucas 5kg', 'MER-ARROZ-5K', '5600112233445', 4500.00, 3200.00, 150, 20, 'Mercearia', 'un'),
+(1, 'Sabão em Pó Omo 1kg', 'LIM-OMO-1KG', '5600555666777', 2500.00, 1800.00, 0, 15, 'Limpeza', 'un'),
+(1, 'Cerveja EKA Lata 33cl', 'BEB-EKA-33', '5600998877665', 180.00, 110.00, 800, 200, 'Bebidas', 'un');
+
+-- E. Criar uma Fatura (Invoice)
+-- Primeiro inserimos a fatura cabeçalho
+INSERT INTO invoices (company_id, client_id, invoice_number, series_year, issue_date, due_date, subtotal, iva_amount, total_amount, status, created_by)
+VALUES 
+(1, 1, 'FT 2024/1001', '2024', CURDATE(), DATE_ADD(CURDATE(), INTERVAL 7 DAY), 7500.00, 1050.00, 8550.00, 'paid', 1);
+
+-- Agora os itens dessa fatura (ID da fatura gerada é 1)
+INSERT INTO invoice_items (invoice_id, product_id, description, quantity, unit_price, unit_cost, iva_rate, total_amount)
+VALUES 
+(1, 1, 'Refrigerante Cuca 330ml', 50, 150.00, 90.00, 14.00, 7500.00);
+
+-- F. Criar Venda Correspondente (Para Dashboard)
+INSERT INTO sales (company_id, invoice_id, client_id, subtotal, iva_amount, total_amount, total_cost_of_goods, payment_method, status, created_by)
+VALUES 
+(1, 1, 1, 7500.00, 1050.00, 8550.00, 4500.00, 'transfer', 'completed', 1);
+
+-- G. Criar Pagamento
+INSERT INTO payments (company_id, invoice_id, client_id, amount, payment_method, reference, confirmed_by)
+VALUES 
+(1, 1, 1, 8550.00, 'transfer', 'TRF-2024-XYZ99', 1);
+
+-- H. Criar Despesas
+INSERT INTO expenses (company_id, description, amount, category, status, is_recurring, due_date, paid_date, created_by)
+VALUES 
+(1, 'Renda do Armazém - Maio', 150000.00, 'rent', 'paid', TRUE, '2024-05-05', '2024-05-04', 1),
+(1, 'Fatura EDEL (Energia)', 45000.00, 'utilities', 'pending', FALSE, '2024-05-25', NULL, 1),
+(1, 'Internet Unitel Box', 15000.00, 'utilities', 'paid', TRUE, '2024-05-10', '2024-05-10', 1);
+
+-- ============================================================
+-- 4. VIEWS ÚTEIS PARA RELATÓRIOS (OPCIONAL)
+-- ============================================================
+
+-- View: Lucro por Venda
+CREATE OR REPLACE VIEW view_profit_report AS
+SELECT 
+    s.id AS sale_id,
+    c.name AS client_name,
+    s.sale_date,
+    s.total_amount AS revenue,
+    s.total_cost_of_goods AS cost,
+    s.gross_profit AS profit,
+    ROUND((s.gross_profit / s.total_amount) * 100, 2) AS margin_percent
+FROM sales s
+JOIN clients c ON s.client_id = c.id
+WHERE s.status = 'completed';
+
+-- View: Stock Crítico
+CREATE OR REPLACE VIEW view_low_stock AS
+SELECT 
+    p.name,
+    p.code,
+    p.stock,
+    p.min_stock,
+    (p.min_stock - p.stock) AS needed_quantity
+FROM products p
+WHERE p.stock <= p.min_stock AND p.status = 'active';
+
+-- ============================================================
+-- FIM DO SCRIPT
+-- ============================================================
