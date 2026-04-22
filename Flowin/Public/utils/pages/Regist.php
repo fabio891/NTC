@@ -2,6 +2,9 @@
 /**
  * FlowIn - Página de Autenticação e Registro
  * Login e Registro de utilizadores com validação contra base de dados
+ * 
+ * Tabelas utilizadas: companies, users
+ * Campos conforme tabelas.txt
  */
 
 // Iniciar sessão
@@ -32,16 +35,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             // Verificar se é email ou telemóvel
             $field = filter_var($email, FILTER_VALIDATE_EMAIL) ? 'email' : 'phone';
             
-            $stmt = $pdo->prepare("SELECT u.id, u.name, u.email, u.password, u.role, c.id as company_id, c.name as company_name, c.status as company_status 
+            $stmt = $pdo->prepare("SELECT u.id, u.name, u.email, u.password_hash, u.role, u.status as user_status,
+                                   c.id as company_id, c.name as company_name, c.status as company_status 
                                    FROM users u 
                                    JOIN companies c ON u.company_id = c.id 
                                    WHERE u." . $field . " = ? AND u.status = 'active'");
             $stmt->execute([$email]);
             $user = $stmt->fetch();
             
-            if ($user && password_verify($password, $user['password'])) {
+            if ($user && password_verify($password, $user['password_hash'])) {
                 if ($user['company_status'] !== 'active') {
                     $error = 'A sua empresa está inativa. Contacte o suporte.';
+                } elseif ($user['user_status'] !== 'active') {
+                    $error = 'A sua conta está inativa. Contacte o administrador.';
                 } else {
                     // Login bem sucedido
                     session_regenerate_id(true);
@@ -51,6 +57,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     $_SESSION['user_role'] = $user['role'];
                     $_SESSION['company_id'] = $user['company_id'];
                     $_SESSION['company_name'] = $user['company_name'];
+                    
+                    // Atualizar last_login
+                    $updateLogin = $pdo->prepare("UPDATE users SET last_login = NOW() WHERE id = ?");
+                    $updateLogin->execute([$user['id']]);
                     
                     header('Location: dashboard.php');
                     exit;
@@ -71,17 +81,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $email = trim($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
     $confirmPassword = $_POST['confirm_password'] ?? '';
-    $idNumber = trim($_POST['id_number'] ?? '');
     $companyName = trim($_POST['company_name'] ?? '');
     $companyNif = trim($_POST['company_nif'] ?? '');
-    $companySector = trim($_POST['company_sector'] ?? '');
+    $companyEmail = trim($_POST['company_email'] ?? '');
+    $companyPhone = trim($_POST['company_phone'] ?? '');
+    $companyAddress = trim($_POST['company_address'] ?? '');
     $terms = isset($_POST['terms']);
     
     // Validações
-    if (empty($ownerName) || empty($email) || empty($password) || empty($companyName) || empty($companyNif)) {
+    if (empty($ownerName) || empty($email) || empty($password) || empty($companyName) || empty($companyNif) || empty($companyEmail)) {
         $error = 'Por favor, preencha todos os campos obrigatórios.';
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $error = 'Email inválido.';
+    } elseif (!filter_var($companyEmail, FILTER_VALIDATE_EMAIL)) {
+        $error = 'Email da empresa inválido.';
     } elseif (strlen($password) < 8 || !preg_match('/^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/', $password)) {
         $error = 'A palavra-passe deve ter pelo menos 8 caracteres, incluindo letras e números.';
     } elseif ($password !== $confirmPassword) {
@@ -107,16 +120,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             }
             
             // Criar empresa
-            $stmt = $pdo->prepare("INSERT INTO companies (name, nif, sector, status, created_at) VALUES (?, ?, ?, 'active', NOW())");
-            $stmt->execute([$companyName, $companyNif, $companySector]);
+            // Campos: name, nif, email, phone, address, currency_code, default_iva, invoice_series_prefix, next_invoice_number, status
+            $stmt = $pdo->prepare("INSERT INTO companies (name, nif, email, phone, address, currency_code, default_iva, invoice_series_prefix, next_invoice_number, status, created_at) 
+                                   VALUES (?, ?, ?, ?, ?, 'AOA', 14.00, 'FT', 1, 'active', NOW())");
+            $stmt->execute([$companyName, $companyNif, $companyEmail, $companyPhone, $companyAddress]);
             $companyId = $pdo->lastInsertId();
             
             // Hash da password
             $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
             
             // Criar utilizador
-            $stmt = $pdo->prepare("INSERT INTO users (company_id, name, email, password, role, id_number, status, created_at) VALUES (?, ?, ?, ?, 'admin', ?, NOW(), 'active')");
-            $stmt->execute([$companyId, $ownerName, $email, $hashedPassword, $idNumber]);
+            // Campos: company_id, name, email, password_hash, role, status
+            $stmt = $pdo->prepare("INSERT INTO users (company_id, name, email, password_hash, role, status, created_at) 
+                                   VALUES (?, ?, ?, ?, 'admin', 'active', NOW())");
+            $stmt->execute([$companyId, $ownerName, $email, $hashedPassword]);
             
             $pdo->commit();
             
@@ -268,10 +285,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                                                     <label for="register-confirm-password" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Confirmar Palavra-passe</label>
                                                     <input id="register-confirm-password" type="password" required class="mt-1 w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 sm:text-sm bg-white dark:bg-slate-800 input-focus-ring">
                                                 </div>
-                                                <div>
-                                                    <label for="register-id-number" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Número de Identificação</label>
-                                                    <input id="register-id-number" type="text" required class="mt-1 w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 sm:text-sm bg-white dark:bg-slate-800 input-focus-ring">
-                                                </div>
                                                 <div class="flex gap-3 pt-4">
                                                     <button type="button" id="next-to-step-2" class="flex-1 py-3 px-4 bg-orange-500 text-white rounded-lg font-semibold hover:bg-orange-600 transition-colors">Continuar</button>
                                                 </div>
@@ -294,17 +307,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                                                     <input id="register-company-nif" type="text" required maxlength="14" class="mt-1 w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 sm:text-sm bg-white dark:bg-slate-800 input-focus-ring">
                                                 </div>
                                                 <div>
-                                                    <label for="register-company-sector" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Setor de Atividade</label>
-                                                    <select id="register-company-sector" required class="mt-1 w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 sm:text-sm bg-white dark:bg-slate-800 input-focus-ring">
-                                                        <option value="">Selecione...</option>
-                                                        <option value="retail">Comércio Retalho</option>
-                                                        <option value="wholesale">Comércio Grossista</option>
-                                                        <option value="services">Serviços</option>
-                                                        <option value="restaurant">Restauração</option>
-                                                        <option value="health">Saúde</option>
-                                                        <option value="education">Educação</option>
-                                                        <option value="other">Outro</option>
-                                                    </select>
+                                                    <label for="register-company-email" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Email da Empresa</label>
+                                                    <input id="register-company-email" type="email" required class="mt-1 w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 sm:text-sm bg-white dark:bg-slate-800 input-focus-ring">
+                                                </div>
+                                                <div>
+                                                    <label for="register-company-phone" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Telefone</label>
+                                                    <input id="register-company-phone" type="tel" placeholder="+244 9XX XXX XXX" class="mt-1 w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 sm:text-sm bg-white dark:bg-slate-800 input-focus-ring">
+                                                </div>
+                                                <div>
+                                                    <label for="register-company-address" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Morada</label>
+                                                    <textarea id="register-company-address" rows="2" class="mt-1 w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 sm:text-sm bg-white dark:bg-slate-800 input-focus-ring"></textarea>
                                                 </div>
                                                 <div class="flex gap-3 pt-4">
                                                     <button type="button" id="back-to-step-1" class="flex-1 py-3 px-4 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg font-semibold hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">Voltar</button>
@@ -321,10 +333,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                                                 <input type="hidden" name="email" id="final-email">
                                                 <input type="hidden" name="password" id="final-password">
                                                 <input type="hidden" name="confirm_password" id="final-confirm-password">
-                                                <input type="hidden" name="id_number" id="final-id-number">
                                                 <input type="hidden" name="company_name" id="final-company-name">
                                                 <input type="hidden" name="company_nif" id="final-company-nif">
-                                                <input type="hidden" name="company_sector" id="final-company-sector">
+                                                <input type="hidden" name="company_email" id="final-company-email">
+                                                <input type="hidden" name="company_phone" id="final-company-phone">
+                                                <input type="hidden" name="company_address" id="final-company-address">
                                                 
                                                 <div class="text-center mb-4">
                                                     <h3 class="text-xl font-bold text-slate-900 dark:text-white">Quase Lá!</h3>
@@ -338,6 +351,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                                                         <p><strong>Email:</strong> <span id="summary-email"></span></p>
                                                         <p><strong>Empresa:</strong> <span id="summary-company"></span></p>
                                                         <p><strong>NIF:</strong> <span id="summary-nif"></span></p>
+                                                        <p><strong>Email Empresa:</strong> <span id="summary-company-email"></span></p>
                                                     </div>
                                                 </div>
                                                 
@@ -409,7 +423,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             function validateStep(stepId) {
                 let valid = true;
                 if (stepId === '1') {
-                    const fields = ['register-owner-name', 'register-email', 'register-password', 'register-confirm-password', 'register-id-number'];
+                    const fields = ['register-owner-name', 'register-email', 'register-password', 'register-confirm-password'];
                     fields.forEach(id => {
                         const el = document.getElementById(id);
                         if (!el.value.trim()) {
@@ -428,7 +442,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                         valid = false;
                     }
                 } else if (stepId === '2') {
-                    const fields = ['register-company-name', 'register-company-nif', 'register-company-sector'];
+                    const fields = ['register-company-name', 'register-company-nif', 'register-company-email'];
                     fields.forEach(id => {
                         const el = document.getElementById(id);
                         if (!el.value.trim()) {
@@ -448,6 +462,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 document.getElementById('summary-email').textContent = document.getElementById('register-email').value;
                 document.getElementById('summary-company').textContent = document.getElementById('register-company-name').value;
                 document.getElementById('summary-nif').textContent = document.getElementById('register-company-nif').value;
+                document.getElementById('summary-company-email').textContent = document.getElementById('register-company-email').value;
             }
 
             document.getElementById('final-form').addEventListener('submit', (e) => {
@@ -461,10 +476,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 document.getElementById('final-email').value = document.getElementById('register-email').value;
                 document.getElementById('final-password').value = document.getElementById('register-password').value;
                 document.getElementById('final-confirm-password').value = document.getElementById('register-confirm-password').value;
-                document.getElementById('final-id-number').value = document.getElementById('register-id-number').value;
                 document.getElementById('final-company-name').value = document.getElementById('register-company-name').value;
                 document.getElementById('final-company-nif').value = document.getElementById('register-company-nif').value;
-                document.getElementById('final-company-sector').value = document.getElementById('register-company-sector').value;
+                document.getElementById('final-company-email').value = document.getElementById('register-company-email').value;
+                document.getElementById('final-company-phone').value = document.getElementById('register-company-phone').value;
+                document.getElementById('final-company-address').value = document.getElementById('register-company-address').value;
             });
 
             document.getElementById('terms').addEventListener('change', (e) => {
