@@ -3,7 +3,12 @@ $pageTitle = 'Documentos Fiscais';
 require_once __DIR__ . '/../../../Includes/header.php';
 
 // Obter empresa_id da sessão
-$empresa_id = $_SESSION['empresa_id'];
+$empresa_id = $_SESSION['empresa_id'] ?? null;
+
+if (!$empresa_id) {
+    header('Location: /Flowin/Public/login.php');
+    exit;
+}
 
 // Processar formulário de submissão
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
@@ -42,7 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $stmt = $pdo->prepare("SELECT next_invoice_number FROM companies WHERE id = ?");
                 $stmt->execute([$empresa_id]);
                 $company = $stmt->fetch();
-                $next_number = $company['next_invoice_number'];
+                $next_number = $company['next_invoice_number'] ?? 1;
                 $invoice_number = "{$tipo} {$series_year}/" . str_pad($next_number, 4, '0', STR_PAD_LEFT);
                 
                 // Inserir fatura
@@ -91,7 +96,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $success_message = 'Documento eliminado com sucesso!';
         }
     } catch (Exception $e) {
-        $pdo->rollBack();
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
         $error_message = 'Erro: ' . $e->getMessage();
     }
 }
@@ -130,59 +137,64 @@ if (isset($error_message)) {
 // Conteúdo principal da página
 ob_start();
 ?>
-            opacity: 0;
-            visibility: hidden;
-            transition: all 0.3s ease;
-        }
-        .modal-overlay.active {
-            opacity: 1;
-            visibility: visible;
-        }
-        .modal-content {
-            transform: scale(0.95);
-            transition: transform 0.3s ease;
-        }
-        .modal-overlay.active .modal-content {
-            transform: scale(1);
-        }
-        
-        /* Loading Spinner */
-        .spinner {
-            border: 3px solid rgba(249, 115, 22, 0.3);
-            border-top-color: #f97316;
-            border-radius: 50%;
-            width: 24px;
-            height: 24px;
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        
-        /* Toast Notifications */
-        .toast {
-            transform: translateX(100%);
-            opacity: 0;
-            transition: all 0.3s ease;
-        }
-        .toast.show {
-            transform: translateX(0);
-            opacity: 1;
-        }
-        
-        /* Badge colors */
-        .badge-ft { background-color: #dbeafe; color: #1e40af; }
-        .badge-pf { background-color: #f3e8ff; color: #6b21a8; }
-        .badge-re { background-color: #dcfce7; color: #166534; }
-        .badge-nc { background-color: #fef9c3; color: #854d0e; }
-        .badge-nd { background-color: #fee2e2; color: #991b1b; }
-        
-        /* Print styles */
-        @media print {
-            .no-print { display: none !important; }
-            .print-only { display: block !important; }
-            body { background: white; color: black; }
-            .card { box-shadow: none; border: 1px solid #ddd; }
-        }
-    </style>
+<style>
+    /* Modal Styles */
+    .modal-overlay {
+        display: none;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s ease;
+    }
+    .modal-overlay.active {
+        display: flex;
+        opacity: 1;
+        visibility: visible;
+    }
+    .modal-content {
+        transform: scale(0.95);
+        transition: transform 0.3s ease;
+    }
+    .modal-overlay.active .modal-content {
+        transform: scale(1);
+    }
+    
+    /* Loading Spinner */
+    .spinner {
+        border: 3px solid rgba(249, 115, 22, 0.3);
+        border-top-color: #f97316;
+        border-radius: 50%;
+        width: 24px;
+        height: 24px;
+        animation: spin 1s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    
+    /* Toast Notifications */
+    .toast {
+        transform: translateX(100%);
+        opacity: 0;
+        transition: all 0.3s ease;
+    }
+    .toast.show {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    
+    /* Badge colors */
+    .badge-ft { background-color: #dbeafe; color: #1e40af; }
+    .badge-pf { background-color: #f3e8ff; color: #6b21a8; }
+    .badge-re { background-color: #dcfce7; color: #166534; }
+    .badge-nc { background-color: #fef9c3; color: #854d0e; }
+    .badge-nd { background-color: #fee2e2; color: #991b1b; }
+    
+    /* Print styles */
+    @media print {
+        .no-print { display: none !important; }
+        .print-only { display: block !important; }
+        body { background: white; color: black; }
+        .card { box-shadow: none; border: 1px solid #ddd; }
+    }
+</style>
 </head>
 <body class="text-slate-200 min-h-screen">
 
@@ -223,7 +235,7 @@ ob_start();
             </div>
         </div>
         
-        <!-- Documents List -->
+        <!-- Documents Grid -->
         <div id="documentsGrid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             <!-- Cards will be dynamically inserted here -->
         </div>
@@ -238,10 +250,10 @@ ob_start();
             </button>
         </div>
         
-    </div>
+    </main>
 
     <!-- Modal Novo/Editar Documento -->
-    <div id="documentModal" class="modal-overlay fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 overflow-y-auto">
+    <div id="documentModal" class="modal-overlay fixed inset-0 bg-black/70 z-50 items-center justify-center p-4 overflow-y-auto">
         <div class="modal-content bg-slate-800 rounded-2xl w-full max-w-5xl max-h-[90vh] overflow-y-auto border border-slate-700 shadow-2xl">
             
             <!-- Modal Header -->
@@ -288,10 +300,473 @@ ob_start();
                         <label class="block text-sm font-medium text-slate-300 mb-2">Cliente *</label>
                         <select id="docClient" class="w-full px-4 py-2.5 bg-slate-700 border border-slate-600 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500">
                             <option value="">Selecione um cliente...</option>
+                            <?php foreach ($clientes as $cliente): ?>
+                                <option value="<?= $cliente['id'] ?>" data-document="<?= htmlspecialchars($cliente['document'] ?? '') ?>"><?= htmlspecialchars($cliente['name']) ?></option>
+                            <?php endforeach; ?>
                         </select>
                     </div>
                     <div id="dueDateField">
                         <label class="block text-sm font-medium text-slate-300 mb-2">Data de Vencimento *</label>
+                        <input type="date" id="docDueDate" class="w-full px-4 py-2.5 bg-slate-700 border border-slate-600 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500">
+                    </div>
+                </div>
+                
+                <!-- Items Section -->
+                <div>
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-white">Itens do Documento</h3>
+                        <button type="button" onclick="addItem()" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors">
+                            + Adicionar Item
+                        </button>
+                    </div>
+                    
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="border-b border-slate-700">
+                                    <th class="text-left py-3 px-4 text-sm font-medium text-slate-400">Produto</th>
+                                    <th class="text-left py-3 px-4 text-sm font-medium text-slate-400 w-24">Qtd</th>
+                                    <th class="text-left py-3 px-4 text-sm font-medium text-slate-400 w-32">Preço Unit.</th>
+                                    <th class="text-left py-3 px-4 text-sm font-medium text-slate-400 w-24">IVA %</th>
+                                    <th class="text-right py-3 px-4 text-sm font-medium text-slate-400 w-32">Total</th>
+                                    <th class="w-16"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="itemsTableBody">
+                                <!-- Items will be added here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- Totals -->
+                <div class="flex justify-end">
+                    <div class="w-full md:w-80 space-y-3">
+                        <div class="flex justify-between text-slate-300">
+                            <span>Subtotal:</span>
+                            <span id="subtotalDisplay">0,00 €</span>
+                        </div>
+                        <div class="flex justify-between text-slate-300">
+                            <span>Desconto:</span>
+                            <input type="number" id="discountInput" value="0" min="0" step="0.01" onchange="calculateTotals()" 
+                                class="w-24 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-right text-white text-sm">
+                        </div>
+                        <div class="flex justify-between text-slate-300">
+                            <span>IVA:</span>
+                            <span id="ivaDisplay">0,00 €</span>
+                        </div>
+                        <div class="flex justify-between text-white font-bold text-lg pt-3 border-t border-slate-700">
+                            <span>Total:</span>
+                            <span id="totalDisplay">0,00 €</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Notes & Status -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-2">Observações</label>
+                        <textarea id="docNotes" rows="3" class="w-full px-4 py-2.5 bg-slate-700 border border-slate-600 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500" placeholder="Notas adicionais..."></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-2">Estado</label>
+                        <select id="docStatus" class="w-full px-4 py-2.5 bg-slate-700 border border-slate-600 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500">
+                            <option value="draft">Rascunho</option>
+                            <option value="issued">Emitido</option>
+                            <option value="paid">Pago</option>
+                            <option value="partial">Parcial</option>
+                            <option value="overdue">Em Atraso</option>
+                            <option value="cancelled">Cancelado</option>
+                        </select>
+                    </div>
+                </div>
+                
+            </div>
+            
+            <!-- Modal Footer -->
+            <div class="sticky bottom-0 bg-slate-800 border-t border-slate-700 p-6 flex items-center justify-end gap-4">
+                <button type="button" onclick="closeModal()" class="px-6 py-2.5 bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-medium transition-colors">
+                    Cancelar
+                </button>
+                <button type="button" onclick="saveDocument()" class="px-6 py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-medium transition-colors">
+                    Guardar Documento
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden form for submission -->
+    <form id="documentForm" method="POST" class="hidden">
+        <input type="hidden" name="action" id="formAction">
+        <input type="hidden" name="invoice_id" id="formInvoiceId">
+        <input type="hidden" name="tipo" id="formTipo">
+        <input type="hidden" name="client_id" id="formClientId">
+        <input type="hidden" name="issue_date" id="formIssueDate">
+        <input type="hidden" name="due_date" id="formDueDate">
+        <input type="hidden" name="notes" id="formNotes">
+        <input type="hidden" name="status" id="formStatus">
+        <input type="hidden" name="discount_amount" id="formDiscountAmount">
+        <input type="hidden" name="items" id="formItems">
+    </form>
+
+    <script>
+        // Dados do servidor
+        const serverData = {
+            faturas: <?= json_encode($faturas) ?>,
+            produtos: <?= json_encode($produtos) ?>,
+            toastMessages: <?= json_encode($toast_messages) ?>
+        };
+        
+        let currentItems = [];
+        let editingInvoiceId = null;
+        let currentFilter = 'all';
+        
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            renderDocuments(serverData.faturas);
+            showToasts();
+        });
+        
+        // Modal functions
+        function openModal(invoice = null) {
+            editingInvoiceId = invoice ? invoice.id : null;
+            
+            if (invoice) {
+                // Edit mode
+                document.getElementById('modalTitle').textContent = 'Editar Documento';
+                document.getElementById('docType').value = invoice.type;
+                document.getElementById('docNumber').value = invoice.invoice_number;
+                document.getElementById('docDate').value = invoice.issue_date;
+                document.getElementById('docDueDate').value = invoice.due_date || '';
+                document.getElementById('docClient').value = invoice.client_id;
+                document.getElementById('docNotes').value = invoice.notes || '';
+                document.getElementById('docStatus').value = invoice.status;
+                
+                // Load items
+                currentItems = invoice.items || [];
+                renderItems();
+                calculateTotals();
+            } else {
+                // Create mode
+                document.getElementById('modalTitle').textContent = 'Novo Documento';
+                document.getElementById('docType').value = '';
+                document.getElementById('docNumber').value = '';
+                document.getElementById('docDate').value = new Date().toISOString().split('T')[0];
+                document.getElementById('docDueDate').value = '';
+                document.getElementById('docClient').value = '';
+                document.getElementById('docNotes').value = '';
+                document.getElementById('docStatus').value = 'draft';
+                currentItems = [];
+                renderItems();
+                calculateTotals();
+            }
+            
+            document.getElementById('documentModal').classList.add('active');
+            onDocTypeChange();
+        }
+        
+        function closeModal() {
+            document.getElementById('documentModal').classList.remove('active');
+            editingInvoiceId = null;
+            currentItems = [];
+        }
+        
+        // Close modal when clicking outside
+        document.getElementById('documentModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+        
+        function onDocTypeChange() {
+            const type = document.getElementById('docType').value;
+            const dueDateField = document.getElementById('dueDateField');
+            
+            if (type === 'RE') {
+                dueDateField.style.display = 'none';
+            } else {
+                dueDateField.style.display = 'block';
+            }
+        }
+        
+        function addItem() {
+            currentItems.push({
+                product_id: '',
+                description: '',
+                quantity: 1,
+                unit_price: 0,
+                unit_cost: 0,
+                iva_rate: 23,
+                total_amount: 0
+            });
+            renderItems();
+            calculateTotals();
+        }
+        
+        function removeItem(index) {
+            currentItems.splice(index, 1);
+            renderItems();
+            calculateTotals();
+        }
+        
+        function updateItem(index, field, value) {
+            currentItems[index][field] = field === 'product_id' ? parseInt(value) || '' : value;
+            
+            if (field === 'product_id') {
+                const product = serverData.produtos.find(p => p.id === parseInt(value));
+                if (product) {
+                    currentItems[index].description = product.name;
+                    currentItems[index].unit_price = parseFloat(product.price) || 0;
+                    currentItems[index].unit_cost = parseFloat(product.cost) || 0;
+                    currentItems[index].iva_rate = parseFloat(product.iva_rate) || 23;
+                }
+            }
+            
+            renderItems();
+            calculateTotals();
+        }
+        
+        function renderItems() {
+            const tbody = document.getElementById('itemsTableBody');
+            tbody.innerHTML = '';
+            
+            currentItems.forEach((item, index) => {
+                const tr = document.createElement('tr');
+                tr.className = 'border-b border-slate-700 hover:bg-slate-700/50';
+                tr.innerHTML = `
+                    <td class="py-3 px-4">
+                        <select onchange="updateItem(${index}, 'product_id', this.value)" class="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/50">
+                            <option value="">Selecione...</option>
+                            ${serverData.produtos.map(p => `<option value="${p.id}" ${item.product_id == p.id ? 'selected' : ''}>${p.name}</option>`).join('')}
+                        </select>
+                    </td>
+                    <td class="py-3 px-4">
+                        <input type="number" value="${item.quantity}" min="1" onchange="updateItem(${index}, 'quantity', parseFloat(this.value))" class="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm text-center focus:outline-none focus:ring-2 focus:ring-orange-500/50">
+                    </td>
+                    <td class="py-3 px-4">
+                        <input type="number" value="${item.unit_price}" min="0" step="0.01" onchange="updateItem(${index}, 'unit_price', parseFloat(this.value))" class="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm text-right focus:outline-none focus:ring-2 focus:ring-orange-500/50">
+                    </td>
+                    <td class="py-3 px-4">
+                        <input type="number" value="${item.iva_rate}" min="0" max="100" onchange="updateItem(${index}, 'iva_rate', parseFloat(this.value))" class="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm text-center focus:outline-none focus:ring-2 focus:ring-orange-500/50">
+                    </td>
+                    <td class="py-3 px-4 text-right text-white font-medium">
+                        ${(item.quantity * item.unit_price).toFixed(2)} €
+                    </td>
+                    <td class="py-3 px-4 text-right">
+                        <button onclick="removeItem(${index})" class="p-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+        
+        function calculateTotals() {
+            let subtotal = 0;
+            let ivaAmount = 0;
+            
+            currentItems.forEach(item => {
+                const itemTotal = item.quantity * item.unit_price;
+                subtotal += itemTotal;
+                ivaAmount += itemTotal * (item.iva_rate / 100);
+            });
+            
+            const discount = parseFloat(document.getElementById('discountInput').value) || 0;
+            const total = subtotal - discount + ivaAmount;
+            
+            document.getElementById('subtotalDisplay').textContent = subtotal.toFixed(2).replace('.', ',') + ' €';
+            document.getElementById('ivaDisplay').textContent = ivaAmount.toFixed(2).replace('.', ',') + ' €';
+            document.getElementById('totalDisplay').textContent = total.toFixed(2).replace('.', ',') + ' €';
+        }
+        
+        function saveDocument() {
+            const tipo = document.getElementById('docType').value;
+            const client_id = document.getElementById('docClient').value;
+            const issue_date = document.getElementById('docDate').value;
+            const due_date = document.getElementById('docDueDate').value;
+            const notes = document.getElementById('docNotes').value;
+            const status = document.getElementById('docStatus').value;
+            const discount = parseFloat(document.getElementById('discountInput').value) || 0;
+            
+            if (!tipo) {
+                alert('Selecione o tipo de documento');
+                return;
+            }
+            if (!client_id) {
+                alert('Selecione um cliente');
+                return;
+            }
+            if (!issue_date) {
+                alert('Selecione a data do documento');
+                return;
+            }
+            if (tipo !== 'RE' && !due_date) {
+                alert('Selecione a data de vencimento');
+                return;
+            }
+            if (currentItems.length === 0) {
+                alert('Adicione pelo menos um item');
+                return;
+            }
+            
+            // Populate hidden form
+            document.getElementById('formAction').value = editingInvoiceId ? 'update' : 'create';
+            document.getElementById('formInvoiceId').value = editingInvoiceId || '';
+            document.getElementById('formTipo').value = tipo;
+            document.getElementById('formClientId').value = client_id;
+            document.getElementById('formIssueDate').value = issue_date;
+            document.getElementById('formDueDate').value = tipo === 'RE' ? '' : due_date;
+            document.getElementById('formNotes').value = notes;
+            document.getElementById('formStatus').value = status;
+            document.getElementById('formDiscountAmount').value = discount;
+            document.getElementById('formItems').value = JSON.stringify(currentItems);
+            
+            // Submit form
+            document.getElementById('documentForm').submit();
+        }
+        
+        function deleteDocument(id) {
+            if (confirm('Tem certeza que deseja eliminar este documento?')) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.innerHTML = `
+                    <input type="hidden" name="action" value="delete">
+                    <input type="hidden" name="invoice_id" value="${id}">
+                `;
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+        
+        function renderDocuments(documents) {
+            const grid = document.getElementById('documentsGrid');
+            const emptyState = document.getElementById('emptyState');
+            
+            if (documents.length === 0) {
+                grid.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+            
+            emptyState.classList.add('hidden');
+            
+            grid.innerHTML = documents.map(doc => {
+                const badgeClass = `badge-${doc.type.toLowerCase()}`;
+                const statusColors = {
+                    'draft': 'bg-slate-600 text-slate-200',
+                    'issued': 'bg-blue-600 text-white',
+                    'paid': 'bg-green-600 text-white',
+                    'partial': 'bg-yellow-600 text-white',
+                    'overdue': 'bg-red-600 text-white',
+                    'cancelled': 'bg-gray-600 text-gray-200'
+                };
+                
+                return `
+                    <div class="bg-slate-800 rounded-xl p-6 border border-slate-700 hover:border-orange-500/50 transition-all group">
+                        <div class="flex items-start justify-between mb-4">
+                            <div>
+                                <span class="${badgeClass} px-3 py-1 rounded-full text-xs font-bold">${doc.type}</span>
+                                <h3 class="text-lg font-bold text-white mt-2">${doc.invoice_number}</h3>
+                                <p class="text-slate-400 text-sm">${doc.client_name || 'Cliente não especificado'}</p>
+                            </div>
+                            <span class="${statusColors[doc.status] || 'bg-slate-600'} px-3 py-1 rounded-full text-xs font-medium capitalize">${doc.status}</span>
+                        </div>
+                        
+                        <div class="space-y-2 mb-4">
+                            <div class="flex justify-between text-sm">
+                                <span class="text-slate-400">Data:</span>
+                                <span class="text-white">${new Date(doc.issue_date).toLocaleDateString('pt-PT')}</span>
+                            </div>
+                            ${doc.due_date ? `
+                            <div class="flex justify-between text-sm">
+                                <span class="text-slate-400">Vencimento:</span>
+                                <span class="${doc.status === 'overdue' ? 'text-red-400' : 'text-white'}">${new Date(doc.due_date).toLocaleDateString('pt-PT')}</span>
+                            </div>
+                            ` : ''}
+                            <div class="flex justify-between text-sm">
+                                <span class="text-slate-400">Total:</span>
+                                <span class="text-white font-bold">${parseFloat(doc.total_amount).toFixed(2).replace('.', ',')} €</span>
+                            </div>
+                        </div>
+                        
+                        <div class="flex gap-2 pt-4 border-t border-slate-700">
+                            <button onclick='openModal(${JSON.stringify(doc)})' class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors">
+                                Editar
+                            </button>
+                            <button onclick="deleteDocument(${doc.id})" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors">
+                                Eliminar
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function filterByType(type) {
+            currentFilter = type;
+            
+            // Update buttons
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                if (btn.dataset.type === type) {
+                    btn.classList.add('bg-orange-500', 'text-white');
+                    btn.classList.remove('bg-slate-700', 'text-slate-300');
+                } else {
+                    btn.classList.remove('bg-orange-500', 'text-white');
+                    btn.classList.add('bg-slate-700', 'text-slate-300');
+                }
+            });
+            
+            searchDocuments();
+        }
+        
+        function searchDocuments() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            
+            let filtered = serverData.faturas;
+            
+            if (currentFilter !== 'all') {
+                filtered = filtered.filter(doc => doc.type === currentFilter);
+            }
+            
+            if (searchTerm) {
+                filtered = filtered.filter(doc => 
+                    doc.invoice_number.toLowerCase().includes(searchTerm) ||
+                    (doc.client_name && doc.client_name.toLowerCase().includes(searchTerm))
+                );
+            }
+            
+            renderDocuments(filtered);
+        }
+        
+        function showToasts() {
+            if (serverData.toastMessages && serverData.toastMessages.length > 0) {
+                serverData.toastMessages.forEach(toast => {
+                    const toastEl = document.createElement('div');
+                    toastEl.className = `fixed top-4 right-4 px-6 py-4 rounded-xl shadow-lg z-50 transform transition-all duration-300 ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'} text-white`;
+                    toastEl.innerHTML = `
+                        <div class="flex items-center gap-3">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${toast.type === 'success' ? 'M5 13l4 4L19 7' : 'M6 18L18 6M6 6l12 12'}"></path>
+                            </svg>
+                            <span class="font-medium">${toast.message}</span>
+                        </div>
+                    `;
+                    document.body.appendChild(toastEl);
+                    
+                    setTimeout(() => toastEl.classList.add('show'), 100);
+                    setTimeout(() => {
+                        toastEl.classList.remove('show');
+                        setTimeout(() => toastEl.remove(), 300);
+                    }, 3000);
+                });
+            }
+        }
+    </script>
+
+<?php
+$content = ob_get_clean();
+require_once __DIR__ . '/../../../Includes/footer.php';
                         <input type="date" id="docDueDate" class="w-full px-4 py-2.5 bg-slate-700 border border-slate-600 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500">
                     </div>
                 </div>
