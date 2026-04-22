@@ -312,7 +312,7 @@ Exemplo para dashboard.php:
 ================================================================================
 7. OBSERVAÇÕES FINAIS 
 ================================================================================
-- Em todas as páginas, aplicar a estrutura descrita na seção 7.
+- Em todas as páginas, aplicar a estrutura descrita na seção 6.
 - Certificar-se de que o ficheiro `header.php` está corretamente configurado.
 - As views devem ser criadas no banco antes de serem usadas nas páginas.
 - Em produção, desative a exibição de erros PDO (use try/catch e logging).
