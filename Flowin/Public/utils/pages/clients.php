@@ -42,8 +42,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $email = trim($_POST['email'] ?? '');
             $telefone = trim($_POST['telefone'] ?? '');
             $morada_rua = trim($_POST['morada_rua'] ?? '');
-            $morada_numero = trim($_POST['morada_numero'] ?? '');
-            $morada_bairro = trim($_POST['morada_bairro'] ?? '');
             $morada_cidade = trim($_POST['morada_cidade'] ?? '');
             $morada_provincia = trim($_POST['morada_provincia'] ?? '');
             $limite_credito = floatval($_POST['limite_credito'] ?? 0.00);
@@ -91,8 +89,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $email = trim($_POST['email'] ?? '');
             $telefone = trim($_POST['telefone'] ?? '');
             $morada_rua = trim($_POST['morada_rua'] ?? '');
-            $morada_numero = trim($_POST['morada_numero'] ?? '');
-            $morada_bairro = trim($_POST['morada_bairro'] ?? '');
             $morada_cidade = trim($_POST['morada_cidade'] ?? '');
             $morada_provincia = trim($_POST['morada_provincia'] ?? '');
             $limite_credito = floatval($_POST['limite_credito'] ?? 0.00);
@@ -253,11 +249,11 @@ if (isset($_GET['editar']) && !empty($_GET['editar'])) {
                 <!-- Filters -->
                 <div class="mt-8 grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div class="md:col-span-2 relative">
-                        <input type="text" placeholder="Pesquisar por nome, email ou telefone..." class="w-full bg-slate-800 border border-slate-700 rounded-lg py-2 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-orange-500">
+                        <input type="text" placeholder="Pesquisar por nome, email ou telefone..." class="w-full bg-slate-800 border border-slate-700 rounded-lg py-2 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-orange-500" disabled>
                         <svg class="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" /></svg>
                     </div>
                     <div class="relative">
-                        <select class="w-full appearance-none bg-slate-800 border border-slate-700 rounded-lg py-2 pl-4 pr-10 focus:outline-none focus:ring-2 focus:ring-orange-500">
+                        <select class="w-full appearance-none bg-slate-800 border border-slate-700 rounded-lg py-2 pl-4 pr-10 focus:outline-none focus:ring-2 focus:ring-orange-500" disabled>
                             <option>Todos os Tipos</option>
                             <option>Individual</option>
                             <option>Empresa</option>
@@ -265,7 +261,7 @@ if (isset($_GET['editar']) && !empty($_GET['editar'])) {
                         <svg class="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 pointer-events-none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
                     </div>
                      <div class="relative">
-                        <select class="w-full appearance-none bg-slate-800 border border-slate-700 rounded-lg py-2 pl-4 pr-10 focus:outline-none focus:ring-2 focus:ring-orange-500">
+                        <select class="w-full appearance-none bg-slate-800 border border-slate-700 rounded-lg py-2 pl-4 pr-10 focus:outline-none focus:ring-2 focus:ring-orange-500" disabled>
                             <option>Todos os Estados</option>
                             <option>Ativo</option>
                             <option>Inativo</option>
@@ -451,25 +447,17 @@ if (isset($_GET['editar']) && !empty($_GET['editar'])) {
                     </div>
                     <div>
                         <p class="text-base font-medium text-white">Endereço</p>
-                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 mt-4">
-                            <div class="sm:col-span-2">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-4">
+                            <div>
                                 <label class="block text-sm font-medium text-slate-300">Rua</label>
                                 <input type="text" name="morada_rua" value="<?php echo htmlspecialchars($cliente_edicao['address_street'] ?? ''); ?>" class="mt-1 w-full bg-slate-700 border border-slate-600 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-orange-500">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-slate-300">Número</label>
-                                <input type="text" name="morada_numero" value="<?php echo htmlspecialchars($cliente_edicao['address_number'] ?? ''); ?>" class="mt-1 w-full bg-slate-700 border border-slate-600 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-orange-500">
-                            </div>
-                        </div>
-                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 mt-4">
-                             <div>
-                                <label class="block text-sm font-medium text-slate-300">Bairro</label>
-                                <input type="text" name="morada_bairro" value="<?php echo htmlspecialchars($cliente_edicao['address_district'] ?? ''); ?>" class="mt-1 w-full bg-slate-700 border border-slate-600 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-orange-500">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-slate-300">Cidade</label>
                                 <input type="text" name="morada_cidade" value="<?php echo htmlspecialchars($cliente_edicao['address_city'] ?? ''); ?>" class="mt-1 w-full bg-slate-700 border border-slate-600 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-orange-500">
                             </div>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-4">
                              <div>
                                 <label class="block text-sm font-medium text-slate-300">Província</label>
                                 <input type="text" name="morada_provincia" value="<?php echo htmlspecialchars($cliente_edicao['address_province'] ?? ''); ?>" class="mt-1 w-full bg-slate-700 border border-slate-600 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-orange-500">
@@ -479,10 +467,6 @@ if (isset($_GET['editar']) && !empty($_GET['editar'])) {
                     <div>
                         <label class="block text-sm font-medium text-slate-300">Limite de Crédito (AOA)</label>
                         <input type="number" step="0.01" name="limite_credito" value="<?php echo htmlspecialchars($cliente_edicao['credit_limit'] ?? '0.00'); ?>" class="mt-1 w-full bg-slate-700 border border-slate-600 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-orange-500">
-                    </div>
-                     <div>
-                        <label class="block text-sm font-medium text-slate-300">Observações</label>
-                        <textarea name="observacoes" rows="3" placeholder="Observações sobre o cliente..." class="mt-1 w-full bg-slate-700 border border-slate-600 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-orange-500"><?php echo htmlspecialchars($cliente_edicao['notes'] ?? ''); ?></textarea>
                     </div>
                  </form>
             </div>
@@ -528,29 +512,41 @@ if (isset($_GET['editar']) && !empty($_GET['editar'])) {
             const cancelCustomerButton = document.getElementById('cancel-customer-button');
 
             const openCustomerModal = () => {
-                customerModal.classList.remove('hidden');
-                customerModal.classList.add('flex');
+                if (customerModal) {
+                    customerModal.classList.remove('hidden');
+                    customerModal.classList.add('flex');
+                }
             };
 
              const closeCustomerModal = () => {
-                customerModal.classList.add('hidden');
-                customerModal.classList.remove('flex');
+                if (customerModal) {
+                    customerModal.classList.add('hidden');
+                    customerModal.classList.remove('flex');
+                }
             };
 
-            newCustomerButton.addEventListener('click', openCustomerModal);
-            closeCustomerModalButton.addEventListener('click', closeCustomerModal);
-            cancelCustomerButton.addEventListener('click', closeCustomerModal);
+            if (newCustomerButton) {
+                newCustomerButton.addEventListener('click', openCustomerModal);
+            }
+            if (closeCustomerModalButton) {
+                closeCustomerModalButton.addEventListener('click', closeCustomerModal);
+            }
+            if (cancelCustomerButton) {
+                cancelCustomerButton.addEventListener('click', closeCustomerModal);
+            }
             
             // Close modal on outside click
-            customerModal.addEventListener('click', (event) => {
-                if (event.target === customerModal) {
-                    closeCustomerModal();
-                }
-            });
+            if (customerModal) {
+                customerModal.addEventListener('click', (event) => {
+                    if (event.target === customerModal) {
+                        closeCustomerModal();
+                    }
+                });
+            }
             
             // Abrir modal automaticamente se estiver em modo de edição
             <?php if ($cliente_edicao): ?>
-            openCustomerModal();
+            setTimeout(openCustomerModal, 100);
             <?php endif; ?>
 
         });
