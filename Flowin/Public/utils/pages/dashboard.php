@@ -3,7 +3,14 @@ $pageTitle = 'Dashboard';
 require_once __DIR__ . '/../../../Includes/header.php';
 
 // Obter dados do dashboard com filtros multi-tenancy
-$empresa_id = $_SESSION['empresa_id'] ?? null;
+// Usar empresa_id ou company_id (ambos são definidos no login para compatibilidade)
+$empresa_id = $_SESSION['empresa_id'] ?? $_SESSION['company_id'] ?? null;
+
+if (!$empresa_id) {
+    // Se não houver empresa_id, redirecionar para login
+    header('Location: Regist.php');
+    exit;
+}
 
 // KPIs - Faturação (últimos 30 dias)
 $stmt = $pdo->prepare("SELECT COALESCE(SUM(total), 0) as total FROM invoices WHERE company_id = ? AND status IN ('emitida', 'paga', 'parcial') AND invoice_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)");
