@@ -109,7 +109,7 @@ $stmt->execute([$empresa_id]);
 $faturas = $stmt->fetchAll();
 
 // Obter clientes para o select
-$stmt_clients = $pdo->prepare("SELECT id, name, nif FROM clients WHERE company_id = ? AND status = 'active' ORDER BY name");
+$stmt_clients = $pdo->prepare("SELECT id, name, document FROM clients WHERE company_id = ? AND status = 'active' ORDER BY name");
 $stmt_clients->execute([$empresa_id]);
 $clientes = $stmt_clients->fetchAll();
 
@@ -488,7 +488,7 @@ $produtos = $stmt_products->fetchAll();
             clientes.forEach(client => {
                 const option = document.createElement('option');
                 option.value = client.id;
-                option.textContent = `${client.name} - NIF: ${client.nif}`;
+                option.textContent = `${client.name} - Doc: ${client.document || 'N/A'}`;
                 select.appendChild(option);
             });
         }
