@@ -117,6 +117,15 @@ $clientes = $stmt_clients->fetchAll();
 $stmt_products = $pdo->prepare("SELECT id, name, price, cost, iva_rate FROM products WHERE company_id = ? AND status = 'active' ORDER BY name");
 $stmt_products->execute([$empresa_id]);
 $produtos = $stmt_products->fetchAll();
+
+// Preparar mensagens para o JavaScript
+$toast_messages = [];
+if (isset($success_message)) {
+    $toast_messages[] = ['type' => 'success', 'message' => $success_message];
+}
+if (isset($error_message)) {
+    $toast_messages[] = ['type' => 'error', 'message' => $error_message];
+}
 ?>
 
 <!DOCTYPE html>
@@ -452,12 +461,22 @@ $produtos = $stmt_products->fetchAll();
             ];
         })) ?>;
 
+        // Mensagens de toast vindas do servidor
+        const serverToastMessages = <?= json_encode($toast_messages) ?>;
+
         // ==================== INICIALIZAÇÃO ====================
         document.addEventListener('DOMContentLoaded', () => {
             loadClients();
             renderDocuments();
             setupMobileMenu();
             setTodayDate();
+            
+            // Mostrar mensagens do servidor
+            if (serverToastMessages && serverToastMessages.length > 0) {
+                serverToastMessages.forEach(msg => {
+                    showToast(msg.type, msg.message);
+                });
+            }
         });
 
         function setTodayDate() {
