@@ -55,8 +55,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     $_SESSION['user_name'] = $user['name'];
                     $_SESSION['user_email'] = $user['email'];
                     $_SESSION['user_role'] = $user['role'];
+                    $_SESSION['empresa_id'] = $user['company_id']; // Alias para consistência com o sistema
                     $_SESSION['company_id'] = $user['company_id'];
                     $_SESSION['company_name'] = $user['company_name'];
+                    $_SESSION['empresa_nome'] = $user['company_name']; // Alias para consistência
                     
                     // Atualizar last_login
                     $updateLogin = $pdo->prepare("UPDATE users SET last_login = NOW() WHERE id = ?");

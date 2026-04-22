@@ -16,7 +16,15 @@ $pageTitle = 'Clientes';
 require_once __DIR__ . '/../../../Includes/header.php';
 require_once __DIR__ . '/../../../Config/database.php';
 
-$empresa_id = $_SESSION['empresa_id'];
+// Usar empresa_id ou company_id (ambos são definidos no login para compatibilidade)
+$empresa_id = $_SESSION['empresa_id'] ?? $_SESSION['company_id'] ?? null;
+
+if (!$empresa_id) {
+    // Se não houver empresa_id, redirecionar para login
+    header('Location: Regist.php');
+    exit;
+}
+
 $mensagem = '';
 $tipo_mensagem = '';
 
