@@ -1,49 +1,93 @@
 <?php
-$pageTitle = 'Dashboard';
-require_once __DIR__ . '/../../../Includes/header.php';
+session_start();
 
-// Obter dados do dashboard com filtros multi-tenancy
-// Usar empresa_id ou company_id (ambos são definidos no login para compatibilidade)
-$empresa_id = $_SESSION['empresa_id'] ?? $_SESSION['company_id'] ?? null;
-
-if (!$empresa_id) {
-    // Se não houver empresa_id, redirecionar para login
+// Verificação de autenticação robusta (suporta 'empresa_id' ou 'company_id')
+if (!isset($_SESSION['empresa_id']) && !isset($_SESSION['company_id'])) {
     header('Location: Regist.php');
     exit;
 }
 
-// KPIs - Faturação (últimos 30 dias)
-$stmt = $pdo->prepare("SELECT COALESCE(SUM(total), 0) as total FROM invoices WHERE company_id = ? AND status IN ('emitida', 'paga', 'parcial') AND invoice_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)");
-$stmt->execute([$empresa_id]);
-$faturacao = $stmt->fetch()['total'];
+$companyId = $_SESSION['empresa_id'] ?? $_SESSION['company_id'];
 
-// KPIs - Despesas (últimos 30 dias)
-$stmt = $pdo->prepare("SELECT COALESCE(SUM(amount), 0) as total FROM expenses WHERE company_id = ? AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)");
-$stmt->execute([$empresa_id]);
-$despesas = $stmt->fetch()['total'];
+require_once __DIR__ . '/../../../Includes/db.php';
 
-// KPIs - Lucro Líquido
-$lucro = $faturacao - $despesas;
+$pageTitle = 'Dashboard';
+require_once __DIR__ . '/../../../Includes/header.php';
 
-// KPIs - Clientes Novos (últimos 30 dias)
-$stmt = $pdo->prepare("SELECT COUNT(*) as total FROM clients WHERE company_id = ? AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)");
-$stmt->execute([$empresa_id]);
-$clientes_novos = $stmt->fetch()['total'];
+// --- BUSCA DE DADOS DO DASHBOARD (Conforme tabelas.txt) ---
 
-// Vendas Recentes
-$stmt = $pdo->prepare("SELECT i.id, i.invoice_number, i.invoice_date, i.total, i.status, c.name AS client_name 
-                       FROM invoices i 
-                       INNER JOIN clients c ON i.client_id = c.id 
-                       WHERE i.company_id = ? 
-                       ORDER BY i.invoice_date DESC 
-                       LIMIT 5");
-$stmt->execute([$empresa_id]);
-$vendas_recentes = $stmt->fetchAll();
+try {
+    // 1. Faturação (últimos 30 dias) - Tabela: invoices
+    // Coluna correta: total_amount, issue_date, status='issued'/'paid'/'partial'
+    $stmt = $pdo->prepare("
+        SELECT COALESCE(SUM(total_amount), 0) as total 
+        FROM invoices 
+        WHERE company_id = ? 
+        AND status IN ('issued', 'paid', 'partial') 
+        AND issue_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+    ");
+    $stmt->execute([$companyId]);
+    $faturacao = $stmt->fetch()['total'];
+    
+    // 2. Despesas (últimos 30 dias) - Tabela: expenses
+    $stmt = $pdo->prepare("
+        SELECT COALESCE(SUM(amount), 0) as total 
+        FROM expenses 
+        WHERE company_id = ? 
+        AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+    ");
+    $stmt->execute([$companyId]);
+    $despesas = $stmt->fetch()['total'];
+    
+    // 3. Lucro Líquido
+    $lucro = $faturacao - $despesas;
+    
+    // 4. Clientes Novos (últimos 30 dias) - Tabela: clients
+    $stmt = $pdo->prepare("
+        SELECT COUNT(*) as total 
+        FROM clients 
+        WHERE company_id = ? 
+        AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+    ");
+    $stmt->execute([$companyId]);
+    $clientes_novos = $stmt->fetch()['total'];
+    
+    // 5. Vendas Recentes - Tabela: invoices JOIN clients
+    // Colunas corretas: issue_date, total_amount, invoice_number
+    $stmt = $pdo->prepare("
+        SELECT i.id, i.invoice_number, i.issue_date, i.total_amount, i.status, c.name AS client_name 
+        FROM invoices i 
+        INNER JOIN clients c ON i.client_id = c.id 
+        WHERE i.company_id = ? 
+        ORDER BY i.issue_date DESC 
+        LIMIT 5
+    ");
+    $stmt->execute([$companyId]);
+    $vendas_recentes = $stmt->fetchAll();
+    
+    // 6. Alertas de Stock - Tabela: products (query direta pois view_low_stock não tem company_id)
+    // Colunas corretas: name, code, stock, min_stock
+    $stmt = $pdo->prepare("
+        SELECT p.name, p.code, p.stock, p.min_stock, (p.min_stock - p.stock) AS needed_quantity
+        FROM products p
+        WHERE p.company_id = ? 
+        AND p.stock <= p.min_stock 
+        AND p.status = 'active'
+        LIMIT 5
+    ");
+    $stmt->execute([$companyId]);
+    $stock_baixo = $stmt->fetchAll();
 
-// Alertas de Stock (usando view_low_stock conforme orientações)
-$stmt = $pdo->prepare("SELECT * FROM view_low_stock WHERE company_id = ? LIMIT 5");
-$stmt->execute([$empresa_id]);
-$stock_baixo = $stmt->fetchAll();
+} catch (PDOException $e) {
+    // Em caso de erro, define valores padrão
+    $faturacao = 0;
+    $despesas = 0;
+    $lucro = 0;
+    $clientes_novos = 0;
+    $vendas_recentes = [];
+    $stock_baixo = [];
+    $dbError = "Erro ao carregar dados: " . $e->getMessage();
+}
 ?>
 
 <!-- Dashboard Content -->
@@ -146,10 +190,10 @@ $stock_baixo = $stmt->fetchAll();
                         <tr class="border-b border-slate-700/50">
                             <td class="py-2 text-white"><?php echo htmlspecialchars($venda['invoice_number']); ?></td>
                             <td class="py-2"><?php echo htmlspecialchars($venda['client_name']); ?></td>
-                            <td class="py-2 text-slate-400"><?php echo date('d/m/Y', strtotime($venda['invoice_date'])); ?></td>
-                            <td class="py-2 text-right text-white">Kz <?php echo number_format($venda['total'], 2, ',', '.'); ?></td>
+                            <td class="py-2 text-slate-400"><?php echo date('d/m/Y', strtotime($venda['issue_date'])); ?></td>
+                            <td class="py-2 text-right text-white">Kz <?php echo number_format($venda['total_amount'], 2, ',', '.'); ?></td>
                             <td class="py-2 text-center">
-                                <span class="px-2 py-1 rounded text-xs <?php echo $venda['status'] == 'paga' ? 'bg-green-500/20 text-green-400' : ($venda['status'] == 'pendente' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-slate-500/20 text-slate-400'); ?>">
+                                <span class="px-2 py-1 rounded text-xs <?php echo in_array($venda['status'], ['paid', 'paga']) ? 'bg-green-500/20 text-green-400' : (in_array($venda['status'], ['partial', 'parcial']) ? 'bg-yellow-500/20 text-yellow-400' : 'bg-slate-500/20 text-slate-400'); ?>">
                                     <?php echo htmlspecialchars($venda['status']); ?>
                                 </span>
                             </td>
@@ -172,9 +216,9 @@ $stock_baixo = $stmt->fetchAll();
                 <div class="flex items-center justify-between py-2 border-b border-slate-700/50">
                     <div>
                         <p class="text-sm text-white"><?php echo htmlspecialchars($produto['name']); ?></p>
-                        <p class="text-xs text-slate-400">Stock: <?php echo $produto['current_stock']; ?> | Mín: <?php echo $produto['min_stock']; ?></p>
+                        <p class="text-xs text-slate-400">Stock: <?php echo $produto['stock']; ?> | Mín: <?php echo $produto['min_stock']; ?></p>
                     </div>
-                    <span class="text-xs bg-red-500/20 text-red-400 px-2 py-1 rounded">Faltam <?php echo $produto['faltante']; ?></span>
+                    <span class="text-xs bg-red-500/20 text-red-400 px-2 py-1 rounded">Faltam <?php echo $produto['needed_quantity']; ?></span>
                 </div>
                 <?php endforeach; ?>
             </div>
