@@ -1,6 +1,5 @@
 <?php
-$pageTitle = 'Produtos';
-require_once __DIR__ . '/../../../Includes/header.php';
+session_start();
 
 // Verificar autenticação e obter empresa_id
 if (!isset($_SESSION['empresa_id']) && !isset($_SESSION['company_id'])) {
@@ -9,7 +8,9 @@ if (!isset($_SESSION['empresa_id']) && !isset($_SESSION['company_id'])) {
 }
 $companyId = $_SESSION['empresa_id'] ?? $_SESSION['company_id'];
 
-// Processar formulário de criação/edição
+$pageTitle = 'Produtos';
+
+// Processar formulário de criação/edição ANTES do header
 $mensagem = '';
 $tipoMensagem = '';
 
@@ -92,8 +93,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $companyId
             ]);
             
-            $mensagem = 'Produto atualizado com sucesso!';
-            $tipoMensagem = 'success';
             $pdo->commit();
             
             // Redirecionar para limpar parâmetros GET e fechar modal
@@ -145,9 +144,17 @@ try {
     $tipoMensagem = 'error';
 }
 
-// Produto em edição (se houver)
+// Mensagem de sucesso via GET
+$mostrarMensagemSucesso = false;
+if (isset($_GET['msg']) && $_GET['msg'] === 'success') {
+    $mensagem = 'Produto atualizado com sucesso!';
+    $tipoMensagem = 'success';
+    $mostrarMensagemSucesso = true;
+}
+
+// Produto em edição (se houver) - só abre modal se NÃO vier de um submit bem-sucedido
 $produtoEdicao = null;
-if (isset($_GET['editar']) && is_numeric($_GET['editar'])) {
+if (isset($_GET['editar']) && is_numeric($_GET['editar']) && !$mostrarMensagemSucesso) {
     try {
         $sql = "SELECT * FROM products WHERE id = ? AND company_id = ?";
         $stmt = $pdo->prepare($sql);
@@ -157,15 +164,9 @@ if (isset($_GET['editar']) && is_numeric($_GET['editar'])) {
         // Ignorar erro
     }
 }
-
-// Mensagem de sucesso via GET
-if (isset($_GET['msg']) && $_GET['msg'] === 'success') {
-    $mensagem = 'Produto atualizado com sucesso!';
-    $tipoMensagem = 'success';
-    // Limpar parâmetros da URL após mostrar mensagem
-    unset($_GET['msg']);
-}
 ?>
+
+<?php require_once __DIR__ . '/../../../Includes/header.php'; ?>
 
 <!-- Conteúdo Principal -->
 <div class="p-4 sm:p-6 md:p-8">
