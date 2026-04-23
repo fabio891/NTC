@@ -1,1 +1,78 @@
-Nothing should be ignored based on the provided file changes. The only modified file is a PHP source file (`Flowin/Public/utils/pages/relatorios.php`), which is a legitimate source code file that should not be ignored. There are no build artifacts, dependency directories, temporary files, or other items in the change list that would warrant adding ignore rules.
+# PHP specific
+*.php~
+*.php.bak
+*.phtml~
+
+# General temp files
+*.tmp
+*.temp
+*~
+
+# Logs
+*.log
+
+# Environment
+.env
+.env.local
+.env.*
+
+# Editor backups
+.swp
+.swo
+
+# OS specific
+.DS_Store
+Thumbs.db
+
+# Cache directories
+.cache/
+__pycache__/
+
+# Build artifacts
+build/
+dist/
+target/
+
+# Dependencies
+node_modules/
+vendor/
+
+# IDE
+.vscode/
+.idea/
+.settings/
+.project
+
+# Coverage
+.coverage
+coverage/
+htmlcov/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Compressed files
+*.zip
+*.gz
+*.tar
+*.tgz
+*.bz2
+*.xz
+*.7z
+*.rar
+*.zst
+*.lz4
+*.lzh
+*.cab
+*.arj
+*.rpm
+*.deb
+*.Z
+*.lz
+*.lzo
+*.tar.gz
+*.tar.bz2
+*.tar.xz
+*.tar.zst
