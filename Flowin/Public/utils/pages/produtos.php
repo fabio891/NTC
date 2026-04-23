@@ -2,6 +2,13 @@
 $pageTitle = 'Produtos';
 require_once __DIR__ . '/../../../Includes/header.php';
 
+// Verificar autenticação e obter empresa_id
+if (!isset($_SESSION['empresa_id']) && !isset($_SESSION['company_id'])) {
+    header('Location: ../../../index.php');
+    exit;
+}
+$companyId = $_SESSION['empresa_id'] ?? $_SESSION['company_id'];
+
 // Processar formulário de criação/edição
 $mensagem = '';
 $tipoMensagem = '';
@@ -18,7 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             $stmt = $pdo->prepare($sql);
             $stmt->execute([
-                $_SESSION['company_id'],
+                $companyId,
                 $_POST['nome'],
                 $_POST['codigo'] ?? null,
                 $_POST['barcode'] ?? null,
@@ -57,7 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_POST['iva_rate'] ?? 14.00,
                 $_POST['estado'] ?? 'active',
                 $_POST['produto_id'],
-                $_SESSION['company_id']
+                $companyId
             ]);
             
             $mensagem = 'Produto atualizado com sucesso!';
@@ -67,7 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Eliminar produto (soft delete - mudar status para discontinued)
             $sql = "UPDATE products SET status = 'discontinued' WHERE id = ? AND company_id = ?";
             $stmt = $pdo->prepare($sql);
-            $stmt->execute([$_POST['produto_id'], $_SESSION['company_id']]);
+            $stmt->execute([$_POST['produto_id'], $companyId]);
             
             $mensagem = 'Produto eliminado com sucesso!';
             $tipoMensagem = 'success';
@@ -87,16 +94,19 @@ try {
             WHERE company_id = ? 
             ORDER BY name ASC";
     $stmt = $pdo->prepare($sql);
-    $stmt->execute([$_SESSION['company_id']]);
+    $stmt->execute([$companyId]);
     $produtos = $stmt->fetchAll();
     
     // Contar total de produtos
     $totalProdutos = count($produtos);
     
-    // Buscar produtos com stock crítico usando a view
-    $sqlLowStock = "SELECT * FROM view_low_stock WHERE company_id = ? LIMIT 5";
+    // Buscar produtos com stock crítico (consulta direta para garantir company_id)
+    $sqlLowStock = "SELECT name, code, stock, min_stock, (min_stock - stock) AS needed_quantity 
+                    FROM products 
+                    WHERE stock <= min_stock AND status = 'active' AND company_id = ? 
+                    LIMIT 5";
     $stmtLowStock = $pdo->prepare($sqlLowStock);
-    $stmtLowStock->execute([$_SESSION['company_id']]);
+    $stmtLowStock->execute([$companyId]);
     $stockCritico = $stmtLowStock->fetchAll();
 } catch (Exception $e) {
     $produtos = [];
@@ -112,7 +122,7 @@ if (isset($_GET['editar']) && is_numeric($_GET['editar'])) {
     try {
         $sql = "SELECT * FROM products WHERE id = ? AND company_id = ?";
         $stmt = $pdo->prepare($sql);
-        $stmt->execute([$_GET['editar'], $_SESSION['company_id']]);
+        $stmt->execute([$_GET['editar'], $companyId]);
         $produtoEdicao = $stmt->fetch();
     } catch (Exception $e) {
         // Ignorar erro
