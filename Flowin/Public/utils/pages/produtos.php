@@ -1,5 +1,6 @@
 <?php
-session_start();
+$pageTitle = 'Produtos';
+require_once __DIR__ . '/../../../Includes/header.php';
 
 // Verificar autenticação e obter empresa_id
 if (!isset($_SESSION['empresa_id']) && !isset($_SESSION['company_id'])) {
@@ -8,9 +9,7 @@ if (!isset($_SESSION['empresa_id']) && !isset($_SESSION['company_id'])) {
 }
 $companyId = $_SESSION['empresa_id'] ?? $_SESSION['company_id'];
 
-$pageTitle = 'Produtos';
-
-// Processar formulário de criação/edição ANTES do header
+// Processar formulário de criação/edição
 $mensagem = '';
 $tipoMensagem = '';
 
@@ -21,31 +20,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo->beginTransaction();
         
         if ($acao === 'criar') {
-            // Gerar código automático se não fornecido (formato: XX-000XX, 7 caracteres)
-            $codigo = $_POST['codigo'] ?? null;
-            if (empty($codigo)) {
-                // Gerar código único: 2 letras + hífen + 3 números + 1 letra
-                $letras = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-                $numeros = '0123456789';
-                $codigo = $letras[random_int(0, 25)] . $letras[random_int(0, 25)] . '-';
-                $codigo .= str_pad(random_int(0, 999), 3, '0', STR_PAD_LEFT);
-                $codigo .= $letras[random_int(0, 25)];
-                
-                // Verificar se já existe e gerar novo se necessário
-                $checkSql = "SELECT id FROM products WHERE code = ? AND company_id = ?";
-                $checkStmt = $pdo->prepare($checkSql);
-                while (true) {
-                    $checkStmt->execute([$codigo, $companyId]);
-                    if (!$checkStmt->fetch()) {
-                        break;
-                    }
-                    // Regenerar se já existir
-                    $codigo = $letras[random_int(0, 25)] . $letras[random_int(0, 25)] . '-';
-                    $codigo .= str_pad(random_int(0, 999), 3, '0', STR_PAD_LEFT);
-                    $codigo .= $letras[random_int(0, 25)];
-                }
-            }
-            
             // Inserir novo produto
             $sql = "INSERT INTO products (company_id, name, code, barcode, description, price, cost, stock, min_stock, category, unit, iva_rate, status) 
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
@@ -53,7 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->execute([
                 $companyId,
                 $_POST['nome'],
-                $codigo,
+                $_POST['codigo'] ?? null,
                 $_POST['barcode'] ?? null,
                 $_POST['descricao'] ?? null,
                 $_POST['preco'],
@@ -93,11 +67,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $companyId
             ]);
             
+            $mensagem = 'Produto atualizado com sucesso!';
+            $tipoMensagem = 'success';
             $pdo->commit();
-            
-            // Redirecionar para limpar parâmetros GET e fechar modal
-            header('Location: produtos.php?msg=success&tipo=edit');
-            exit;
         } elseif ($acao === 'eliminar') {
             // Eliminar produto (soft delete - mudar status para discontinued)
             $sql = "UPDATE products SET status = 'discontinued' WHERE id = ? AND company_id = ?";
@@ -144,17 +116,9 @@ try {
     $tipoMensagem = 'error';
 }
 
-// Mensagem de sucesso via GET
-$mostrarMensagemSucesso = false;
-if (isset($_GET['msg']) && $_GET['msg'] === 'success') {
-    $mensagem = 'Produto atualizado com sucesso!';
-    $tipoMensagem = 'success';
-    $mostrarMensagemSucesso = true;
-}
-
-// Produto em edição (se houver) - só abre modal se NÃO vier de um submit bem-sucedido
+// Produto em edição (se houver)
 $produtoEdicao = null;
-if (isset($_GET['editar']) && is_numeric($_GET['editar']) && !$mostrarMensagemSucesso) {
+if (isset($_GET['editar']) && is_numeric($_GET['editar'])) {
     try {
         $sql = "SELECT * FROM products WHERE id = ? AND company_id = ?";
         $stmt = $pdo->prepare($sql);
@@ -165,8 +129,6 @@ if (isset($_GET['editar']) && is_numeric($_GET['editar']) && !$mostrarMensagemSu
     }
 }
 ?>
-
-<?php require_once __DIR__ . '/../../../Includes/header.php'; ?>
 
 <!-- Conteúdo Principal -->
 <div class="p-4 sm:p-6 md:p-8">
@@ -333,9 +295,8 @@ if (isset($_GET['editar']) && is_numeric($_GET['editar']) && !$mostrarMensagemSu
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-slate-300 mb-1">Código do Produto</label>
-                    <input type="text" name="codigo" id="formCodigo" readonly
-                           class="w-full bg-slate-700 border border-slate-600 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-orange-500 text-white cursor-not-allowed opacity-75">
-                    <small class="text-slate-400 mt-1 block">Gerado automaticamente</small>
+                    <input type="text" name="codigo" id="formCodigo" 
+                           class="w-full bg-slate-700 border border-slate-600 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-orange-500 text-white">
                 </div>
             </div>
             
@@ -441,7 +402,6 @@ function abrirModalNovoProduto() {
     document.getElementById('formProdutoId').value = '';
     document.getElementById('formNome').value = '';
     document.getElementById('formCodigo').value = '';
-    document.getElementById('formCodigo').readOnly = true;
     document.getElementById('formDescricao').value = '';
     document.getElementById('formCategoria').value = '';
     document.getElementById('formUnidade').value = 'un';
@@ -519,7 +479,6 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('formProdutoId').value = '<?php echo $produtoEdicao['id']; ?>';
     document.getElementById('formNome').value = '<?php echo htmlspecialchars($produtoEdicao['name']); ?>';
     document.getElementById('formCodigo').value = '<?php echo htmlspecialchars($produtoEdicao['code'] ?? ''); ?>';
-    document.getElementById('formCodigo').readOnly = true; // Código não editável
     document.getElementById('formDescricao').value = '<?php echo htmlspecialchars($produtoEdicao['description'] ?? ''); ?>';
     document.getElementById('formCategoria').value = '<?php echo htmlspecialchars($produtoEdicao['category'] ?? ''); ?>';
     document.getElementById('formUnidade').value = '<?php echo htmlspecialchars($produtoEdicao['unit'] ?? 'un'); ?>';
