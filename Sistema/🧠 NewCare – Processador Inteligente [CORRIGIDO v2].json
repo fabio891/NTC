@@ -1,0 +1,1563 @@
+{
+  "name": "🧠 NewCare – Processador Inteligente [CORRIGIDO v2]",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "const dados = $json;\nlet anexos = [];\n\n// Converte a string de anexos de volta para Array, se necessário\ntry {\n  anexos = typeof dados.anexos === 'string' ? JSON.parse(dados.anexos) : (dados.anexos || []);\n} catch (e) {\n  anexos = [];\n}\n\n// LIMPEZA DO BASE64 (Remove o prefixo data:image/... caso o WhatsApp envie)\nanexos = anexos.map(a => {\n  let b64 = a.base64 || a.conteudo_base64 || '';\n  if (b64.includes(',')) {\n    b64 = b64.split(',')[1];\n  }\n  return { ...a, base64: b64 };\n});\n\nconst tem_imagem = anexos.some(a => ['jpg','jpeg','png','webp','gif','bmp'].includes((a.tipo||'').toLowerCase()) && a.base64);\nconst tem_pdf    = anexos.some(a => (a.tipo||'').toLowerCase() === 'pdf');\nconst tem_excel  = anexos.some(a => ['xlsx','xls','csv'].includes((a.tipo||'').toLowerCase()));\nconst tem_audio  = anexos.some(a => ['ogg','mp3','wav','m4a','opus'].includes((a.tipo||'').toLowerCase()));\n\n// FIX v2: Contadores para debugging\nconst count_imagens = anexos.filter(a => ['jpg','jpeg','png','webp','gif','bmp'].includes((a.tipo||'').toLowerCase()) && a.base64).length;\nconst count_pdfs    = anexos.filter(a => (a.tipo||'').toLowerCase() === 'pdf').length;\nconst count_excels  = anexos.filter(a => ['xlsx','xls','csv'].includes((a.tipo||'').toLowerCase())).length;\nconst count_audios  = anexos.filter(a => ['ogg','mp3','wav','m4a','opus'].includes((a.tipo||'').toLowerCase())).length;\n\nreturn { \n  json: { \n    ...dados, \n    anexos: anexos, \n    tipos_anexos: { tem_imagem, tem_pdf, tem_excel, tem_audio },\n    contagem_anexos: { count_imagens, count_pdfs, count_excels, count_audios, total: anexos.length },\n    precisa_preprocessamento: (tem_imagem || tem_pdf || tem_excel || tem_audio)\n  } \n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -992,
+        352
+      ],
+      "id": "9c5147a0-add8-4d1d-a5f0-02ddecebf0a0",
+      "name": "Identificar Tipos de Anexos"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "cond_imagem",
+              "leftValue": "={{ $json.tipos_anexos.tem_imagem }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -768,
+        352
+      ],
+      "id": "590db0dc-1610-4210-94af-7da7ab87b02f",
+      "name": "Tem Imagem?"
+    },
+    {
+      "parameters": {
+        "jsCode": "return { json: { ...$json, texto_ocr: '' } };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -544,
+        448
+      ],
+      "id": "94b666d7-9393-4657-a201-9f46c5302c6b",
+      "name": "Sem Imagem"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "cond_pdf",
+              "leftValue": "={{ $json.tipos_anexos.tem_pdf }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -320,
+        352
+      ],
+      "id": "c9fe8ca4-2b49-4415-8144-f5702a85be12",
+      "name": "Tem PDF?"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ═══════════════════════════════════════════════════════════════\n// FIX v2: Suporte a MÚLTIPLOS PDFs\n// Consolida texto de 3 fontes:\n//   A) Campo texto_pdf pré-extraído pelo WF1 (string direta)\n//   B) Campo texto dentro de cada item do array anexos\n//   C) Fallback: nome do arquivo como referência\n// ═══════════════════════════════════════════════════════════════\nconst dados = $('Tem PDF?').first().json;\nlet textosAcumulados = [];\n\n// Fonte A: texto_pdf já enviado pelo WF1\nconst textoPdfWF1 = $json.texto_pdf || $json.text || $json.content || '';\nif (textoPdfWF1.trim()) {\n  textosAcumulados.push(textoPdfWF1.trim());\n}\n\n// Fonte B: PDFs com texto pre-extraído dentro do array de anexos\nlet anexos = [];\ntry {\n  anexos = typeof dados.anexos === 'string' ? JSON.parse(dados.anexos) : (dados.anexos || []);\n} catch(e) { anexos = []; }\n\nconst pdfs = anexos.filter(a => (a.tipo || '').toLowerCase() === 'pdf');\n\nfor (let i = 0; i < pdfs.length; i++) {\n  const pdf = pdfs[i];\n  const nomeArquivo = pdf.nome || pdf.filename || `PDF ${i+1}`;\n\n  if (pdf.texto && pdf.texto.trim()) {\n    // PDF já tem texto extraído (enviado pelo WF1)\n    const textoNormalizado = pdf.texto.trim();\n    if (!textosAcumulados.includes(textoNormalizado)) {\n      const prefixo = pdfs.length > 1 ? `[PDF ${i+1}: ${nomeArquivo}]\\n` : '';\n      textosAcumulados.push(prefixo + textoNormalizado);\n    }\n  } else if (pdf.base64 && !textoPdfWF1.trim()) {\n    // PDF com base64 mas sem texto extraído — WF1 deveria ter feito a extração.\n    // Anotamos para o IA saber que havia um PDF não processado.\n    textosAcumulados.push(`[PDF ${i+1}: \"${nomeArquivo}\" recebido como base64 — extração de texto requer processamento adicional no WF1 via pdfjs/Textract]`);\n  }\n}\n\nconst textoPdfFinal = textosAcumulados.join('\\n\\n─────────────────\\n\\n').substring(0, 8000);\n\nreturn { json: { ...dados, texto_pdf: textoPdfFinal } };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -96,
+        256
+      ],
+      "id": "ba315080-376f-4919-985c-8b30878110cb",
+      "name": "Parsear PDF"
+    },
+    {
+      "parameters": {
+        "jsCode": "return { json: { ...$json, texto_pdf: '' } };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -96,
+        448
+      ],
+      "id": "5c1f126b-e526-4d5c-9b33-23d823a9904c",
+      "name": "Sem PDF"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "cond_excel",
+              "leftValue": "={{ $json.tipos_anexos.tem_excel }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        128,
+        352
+      ],
+      "id": "049466b5-9e6d-41e8-8cdd-b26d02f37e7a",
+      "name": "Tem Excel?"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ═══════════════════════════════════════════════════════════════\n// FIX v2: Parsear Excel — passa o texto já processado pelo\n// nó 'Code in JavaScript2' sem tentar re-construí-lo.\n// O bug original criava uma tabela com os campos do JSON como\n// se fossem colunas de dados, corrompendo o resultado.\n// ═══════════════════════════════════════════════════════════════\nconst textoExcel = $json.texto_excel || '';\nconst folhasExcel = $json.folhas_excel || [];\n\nreturn { json: { ...$json, texto_excel: textoExcel, folhas_excel: folhasExcel } };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        576,
+        256
+      ],
+      "id": "794a98da-7574-493d-b5a4-21aec4d5e767",
+      "name": "Parsear Excel"
+    },
+    {
+      "parameters": {
+        "jsCode": "return { json: { ...$json, texto_excel: '' } };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        576,
+        448
+      ],
+      "id": "e146b67b-bcb0-4167-939e-8e1d027e8517",
+      "name": "Sem Excel"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "cond_audio",
+              "leftValue": "={{ $json.tipos_anexos.tem_audio }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        800,
+        352
+      ],
+      "id": "6434009b-64fd-48c1-b839-d84b6d67d2cc",
+      "name": "Tem Áudio?"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ═══════════════════════════════════════════════════════════════\n// FIX v2: Processar TODOS os Áudios via Groq Whisper\n// Substitui o nó HTTP anterior que só processava 1 áudio\n// e exigia dados binários (incompatível com base64 do WhatsApp).\n// Este nó usa axios + FormData para enviar cada áudio.\n//\n// CONFIGURAÇÃO: Define a variável de ambiente GROQ_API_KEY\n// no n8n (Settings → Environment Variables) OU substitui\n// o valor abaixo pela tua chave diretamente.\n// ═══════════════════════════════════════════════════════════════\nconst axios = require('axios');\nconst FormData = require('form-data');\n\n// ── Chave Groq (usa variável de ambiente por segurança) ──\nconst GROQ_API_KEY = $env.GROQ_API_KEY || 'SUBSTITUI_PELA_TUA_GROQ_API_KEY';\n\nconst dados = { ...$json };\nlet texto_acumulado = '';\n\n// ── 1. Extrair todos os áudios ──\nlet anexos = [];\ntry {\n  anexos = typeof dados.anexos === 'string' ? JSON.parse(dados.anexos) : (dados.anexos || []);\n} catch(e) { anexos = []; }\n\nconst audios = anexos.filter(a =>\n  ['ogg', 'mp3', 'wav', 'm4a', 'opus'].includes((a.tipo || '').toLowerCase()) && a.base64\n);\n\nif (audios.length === 0) {\n  const output = { ...dados };\n  output.texto_audio = '';\n  return [{ json: output }];\n}\n\n// ── 2. Processar cada áudio sequencialmente ──\nconst mimeMap = {\n  ogg:  'audio/ogg',\n  mp3:  'audio/mpeg',\n  wav:  'audio/wav',\n  m4a:  'audio/mp4',\n  opus: 'audio/opus'\n};\n\nfor (let i = 0; i < audios.length; i++) {\n  const audio = audios[i];\n  const nomeArquivo = audio.nome || audio.filename || `audio_${i+1}`;\n\n  try {\n    // Limpar e decodificar base64\n    let b64 = (audio.base64 || '').replace(/\\s/g, '');\n    if (b64.includes(',')) b64 = b64.split(',')[1];\n    if (!b64) {\n      texto_acumulado += `\\n[Áudio ${i+1}: base64 vazio ou inválido]`;\n      continue;\n    }\n\n    const tipo = (audio.tipo || 'ogg').toLowerCase();\n    const mimeType = mimeMap[tipo] || 'audio/ogg';\n    const ext = tipo;\n    const buffer = Buffer.from(b64, 'base64');\n    b64 = null; // Libera memória imediatamente\n\n    // Construir FormData\n    const form = new FormData();\n    form.append('file', buffer, {\n      filename: `${nomeArquivo.replace(/\\.[^.]+$/, '')}.${ext}`,\n      contentType: mimeType\n    });\n    form.append('model',           'whisper-large-v3-turbo');\n    form.append('temperature',     '0');\n    form.append('response_format', 'verbose_json');\n    form.append('language',        'pt');\n\n    const response = await axios.post(\n      'https://api.groq.com/openai/v1/audio/transcriptions',\n      form,\n      {\n        headers: {\n          ...form.getHeaders(),\n          'Authorization': `Bearer ${GROQ_API_KEY}`\n        },\n        timeout: 120000,\n        maxBodyLength: Infinity,\n        maxContentLength: Infinity\n      }\n    );\n\n    const transcricao = response.data.text || '';\n    if (transcricao.trim()) {\n      const prefixo = audios.length > 1\n        ? `[Áudio ${i+1}: ${nomeArquivo}]\\n`\n        : '';\n      texto_acumulado += (texto_acumulado ? '\\n\\n─────────────────\\n\\n' : '') + prefixo + transcricao.trim();\n    }\n\n  } catch (err) {\n    const status = err.response?.status || 'sem status';\n    const msg    = err.response?.data?.error?.message || err.response?.data?.message || err.message;\n    texto_acumulado += `\\n[Erro Áudio ${i+1} (${nomeArquivo}) | HTTP ${status}: ${msg}]`;\n  }\n\n  // Pausa entre requisições para não sobrecarregar a API\n  if (i < audios.length - 1) {\n    await new Promise(r => setTimeout(r, 500));\n  }\n}\n\n// ── 3. Retorno limpo ──\nconst output = { ...dados };\ndelete output.message_raw; // Remove campos pesados\noutput.texto_audio = texto_acumulado;\n\nreturn [{ json: output }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1024,
+        256
+      ],
+      "id": "0c981ee1-34b7-4205-aad0-d67e8cb955da",
+      "name": "Processar Todos os Áudios"
+    },
+    {
+      "parameters": {
+        "jsCode": "// FIX v2: O nó 'Processar Todos os Áudios' já retorna\n// o texto acumulado de TODOS os áudios em 'texto_audio'.\n// Este nó apenas garante que o campo está presente e\n// mantém compatibilidade com o fluxo descendente.\nconst transcricao = $json.texto_audio || '';\nreturn { json: { ...$json, texto_audio: transcricao } };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1248,
+        256
+      ],
+      "id": "4f7d4f64-bee4-45d8-a041-292ad485784b",
+      "name": "Parsear Transcrição"
+    },
+    {
+      "parameters": {
+        "jsCode": "return { json: { ...$json, texto_audio: '' } };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1248,
+        448
+      ],
+      "id": "0e8d181c-a41d-4217-a689-46a516725044",
+      "name": "Sem Áudio"
+    },
+    {
+      "parameters": {
+        "jsCode": "const original = $json.texto || '';\nconst ocr   = $json.texto_ocr || '';\nconst pdf   = $json.texto_pdf || '';\nconst excel = $json.texto_excel || '';\nconst audio = $json.texto_audio || '';\n\nconst partes = [\n  original && `[MENSAGEM ORIGINAL]\\n${original}`,\n  ocr      && `[IMAGEM - TEXTO EXTRAÍDO POR OCR]\\n${ocr}`,\n  pdf      && `[PDF - TEXTO EXTRAÍDO]\\n${pdf}`,\n  excel    && `[EXCEL - CONTEÚDO DA TABELA]\\n${excel}`,\n  audio    && `[ÁUDIO - TRANSCRIÇÃO]\\n${audio}`\n].filter(Boolean);\n\nreturn { \n  json: { \n    ...$json, \n    texto_enriquecido: partes.join('\\n\\n═══════════════════════\\n\\n')\n  } \n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1472,
+        352
+      ],
+      "id": "ee7c93b4-ec37-461a-b696-d2f02c44af3b",
+      "name": "Montar Texto Enriquecido"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.texto_enriquecido || $json.texto }}",
+        "options": {
+          "systemMessage": "És um assistente comercial da NewCare Saúde. Classifica a mensagem do cliente numa das categorias abaixo e responde APENAS com JSON puro, sem explicações, sem markdown.\n\nCategorias:\n- proforma: cliente pede orçamento, cotação, preço, proforma\n- compra: cliente envia lista de itens para comprar, pedido, encomenda\n- outros: dúvidas, reclamações, informações gerais\n\nA mensagem pode conter texto original + conteúdo extraído de imagens, PDFs ou Excel. Usa todo o conteúdo disponível.\n\nRegras para o campo \"resumo\":\n- Deve ser uma frase rica e descritiva (até 250 caracteres).\n- **Comece por incorporar a mensagem original do cliente** (ex: \"Cliente informa que tem pedidos...\" ou \"Cliente diz: ...\").\n- Em seguida, destaque os 2-3 principais produtos identificados (nome e quantidade) e o número total aproximado.\n- Não mencione os formatos dos anexos (ex: \"via imagem\", \"em PDF\").\n- Exemplo para compra: \"Cliente informa que tem pedidos nos documentos. Solicita compra de Dolodril 30 comprimidos, Neuroxil 20 cápsulas, Omeprazol 40 comprimidos, e outros 7 itens listados.\"\n- Exemplo para proforma: \"Cliente pede orçamento para Paracetamol 500mg, Amoxicilina 500mg, Ibuprofeno 400mg, conforme referido na mensagem.\"\n\nResponde APENAS com este JSON:\n{\"categoria\": \"compra\", \"confianca\": 95, \"resumo\": \"Cliente informa que tem pedidos nos documentos. Solicita compra de Dolodril 30 comprimidos, Neuroxil 20 cápsulas, Omeprazol 40 comprimidos, e outros itens, totalizando cerca de 10 produtos.\"}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        1696,
+        352
+      ],
+      "id": "ea6561bb-3199-414f-bc4b-f17440258a46",
+      "name": "Classificador IA"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Puxa os dados originais do nó antes do Agente de IA\nconst dadosOriginais = $('Montar Texto Enriquecido').first().json;\n\n// 2. Pega na resposta da IA\nconst output = $json.output || $json.text || $json.content || '';\n\nlet c;\ntry { \n  c = JSON.parse(output.replace(/```json/gi,'').replace(/```/g,'').trim()); \n} catch(e) { \n  const m = output.match(/\\{[\\s\\S]*?\\}/); \n  c = m ? JSON.parse(m[0]) : { categoria: 'outros', confianca: 0, resumo: '' }; \n}\n\nif (!['proforma','compra','outros'].includes(c.categoria)) c.categoria = 'outros';\n\n// 3. Mescla os dados originais com a nova classificação\nreturn { \n  json: { \n    ...dadosOriginais, \n    categoria: c.categoria, \n    confianca_classificacao: c.confianca || 0, \n    resumo_classificacao: c.resumo || '' \n  } \n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2048,
+        352
+      ],
+      "id": "8e0ae0f4-a1f6-45e8-9df1-72d7f950e022",
+      "name": "Parsear Classificação"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.categoria }}",
+                    "rightValue": "={{ ['compra', 'proforma'].includes($json.categoria).toString() }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notEquals"
+                    },
+                    "id": "113f08d2-1f1c-4221-a98a-7c736ca17c80"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Compra/Proforma"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.categoria }}",
+                    "rightValue": "outros",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "b0cacf99-0852-4c7f-9f94-26fa2ff48579"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Outros"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        2272,
+        336
+      ],
+      "id": "7fc6b100-a2bc-46c8-bfed-0722cb5a7207",
+      "name": "Switch por Categoria"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ 'Conteúdo completo da mensagem e anexos:\\n\\n' + $json.texto_enriquecido }}",
+        "options": {
+          "systemMessage": "És especialista em extração e organização de pedidos farmacêuticos da NewCare Saúde.\n\nResumo do processamento:\nRecebes um texto bruto que pode conter mensagem original, OCR, PDF ou Excel. Este texto pode incluir saudações, informações adicionais do cliente (ex: \"Boa tarde, gostaria de fazer um pedido\") e também listas de medicamentos. As quantidades, dosagens e unidades muitas vezes vêm desorganizadas (números soltos, parênteses separados, linhas isoladas). A tua tarefa é extrair TODOS os itens de medicamentos, reorganizar corretamente cada medicamento com a sua quantidade, dosagem e forma farmacêutica, e preservar qualquer texto não relacionado a medicamentos (saudações, pedidos, observações) num campo separado.\n\nREGRAS OBRIGATÓRIAS:\n\nOrganização de quantidades (prioridade máxima):\n\nNúmeros como \"30 (500 mg)\", \"20 (150 mg)\" representam quantidade + dosagem do item anterior. Devem ser combinados no mesmo item.\n\nSe uma linha contiver apenas números, unidades ou parênteses (ex: \"30\", \"(500 mg)\", \"cx 20\"), associe‑a ao item imediatamente anterior.\n\nLinhas que só têm números ou símbolos sem contexto e não puderem ser vinculadas a um medicamento devem ser ignoradas.\n\nSe a quantidade aparecer antes do nome (ex: \"30 Dolodil 500mg\"), extraia corretamente.\n\nPreservação de texto não farmacêutico:\n\nSaudações, informações do cliente, pedidos, observações, datas, horários, etc. não devem ser excluídos.\n\nTodo o texto que não for identificado como parte de um medicamento deve ser mantido e colocado no campo \"outras_informacoes\" como uma única string, preservando a ordem original e removendo apenas ruído puro (ex: \"---\", \"Um dode\", caracteres isolados sem sentido, linhas vazias repetitivas).\n\nSe não houver texto não farmacêutico, o campo \"outras_informacoes\" pode ser omitido ou ter valor \"\".\n\nLimpeza de ruído (apenas para lixo evidente):\n\nRemova apenas itens claramente não farmacêuticos que não transmitem informação útil (ex: \"---\", \"***\", \"Um dode\", cabeçalhos de tabela sem conteúdo, símbolos repetidos).\n\nNão remova frases completas como \"Bom dia\", \"Por favor\", \"Anexo segue\", etc.\n\nEstrutura de saída:\n\ncodigo: sempre string vazia (reservado).\n\ndescricao: nome do medicamento (já vem corrigido), incluindo dosagem e forma farmacêutica.\nExemplo: \"Dolodil 500mg comprimido\"\n\nunidade: \"cx\" (caixa), \"fr\" (frasco), \"bl\" (blister), \"un\" (unidade), ou vazio se não souber.\n\nquantidade: número inteiro (padrão 1 se não especificado).\n\noutras_informacoes: string com todo o texto não medicamento preservado (opcional).\n\nAgrupamento:\n\nItens com a mesma descrição (nome + dosagem + forma) devem ter quantidades somadas.\n\nResponda APENAS com JSON puro, sem markdown, sem explicações, seguindo este formato:\n\n{\"itens\": [{\"codigo\": \"\", \"descricao\": \"Paracetamol 500mg comprimido\", \"unidade\": \"cx\", \"quantidade\": 10}], \"outras_informacoes\": \"Boa tarde, gostaria de fazer o pedido abaixo\"}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        2496,
+        96
+      ],
+      "id": "d3812f05-63ea-4f6e-804a-f3aeab4ff1e9",
+      "name": "Extrator de Itens IA"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Puxa os dados completos que entraram na rota de compra\nconst dadosOriginais = $('Switch por Categoria').first().json;\n\nconst output = $json.output || $json.text || $json.content || '';\nlet extraido;\ntry { \n  extraido = JSON.parse(output.replace(/```json/gi,'').replace(/```/g,'').trim()); \n} catch(e) { \n  const m = output.match(/\\{[\\s\\S]*\\}/); \n  extraido = m ? JSON.parse(m[0]) : { itens: [] }; \n}\n\nlet contador = 1;\nconst itensFinal = (extraido.itens || []).map(item => ({\n  codigo:    (item.codigo && item.codigo.trim()) ? item.codigo.trim().toUpperCase() : ('ITEM' + String(contador++).padStart(3,'0')),\n  descricao: (item.descricao || 'Item sem descrição').trim(),\n  unidade:   (item.unidade || '').trim(),\n  quantidade: Number(item.quantidade) || 1\n}));\n\n// 2. Adiciona os itens aos dados originais\ndadosOriginais.pedido_id   = 'PED-' + new Date().toISOString().replace(/[-:T]/g,'').split('.')[0];\ndadosOriginais.itens       = itensFinal;\ndadosOriginais.total_itens = itensFinal.length;\n\nreturn { json: dadosOriginais };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3072,
+        96
+      ],
+      "id": "141674c9-ff91-4cfb-a42d-7728ca5c0351",
+      "name": "Gerar Tabela Estruturada"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "cond_fase2_margem",
+              "leftValue": "=false",
+              "rightValue": "true",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        3296,
+        96
+      ],
+      "id": "e2ca216f-1e7c-49e8-b031-e1d729454cbf",
+      "name": "Fase 2 Ativa? (Margem ERP)"
+    },
+    {
+      "parameters": {
+        "url": "=={{ $env.ERP_API_URL }}/clientes/{{ encodeURIComponent($json.remetente) }}/margem",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 5000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3520,
+        0
+      ],
+      "id": "b26d37bb-d957-4882-82a2-c93190e511a9",
+      "name": "Buscar Margem Cliente (ERP)",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const dados = $json;\ndados.margem_percentual = 0;\nreturn { json: dados };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3520,
+        192
+      ],
+      "id": "90f214fe-5429-431f-9b34-0e3c9dc47c20",
+      "name": "Margem Padrão (Fase 1)"
+    },
+    {
+      "parameters": {
+        "jsCode": "const p = $json;\nconst margem = p.margem_percentual || 0;\nlet prioridade, label;\nif (margem >= 40)      { prioridade = 1; label = 'ALTA'; }\nelse if (margem >= 20) { prioridade = 2; label = 'MÉDIA'; }\nelse                   { prioridade = 3; label = 'BAIXA'; }\nreturn { json: { ...p, prioridade, prioridade_label: label, sla_minutos: prioridade === 1 ? 30 : prioridade === 2 ? 60 : 120 } };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3744,
+        96
+      ],
+      "id": "47896494-a803-4175-9e92-9f754e3f3cde",
+      "name": "Calcular Prioridade"
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "value": "NTmOyVKKroqCWoA8",
+          "mode": "list",
+          "cachedResultName": "pedidos_processados",
+          "cachedResultUrl": "/projects/RclsYmQ6XcS8ybpc/datatables/NTmOyVKKroqCWoA8"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "pedido_id": "={{ $json.pedido_id }}",
+            "cliente_id": "={{ $json.remetente }}",
+            "canal": "={{ $json.canal }}",
+            "categoria": "={{ $json.categoria }}",
+            "itens": "={{ JSON.stringify($json.itens) }}",
+            "total_itens": "={{ $json.total_itens }}",
+            "prioridade": "={{ $json.prioridade }}",
+            "prioridade_label": "={{ $json.prioridade_label }}",
+            "sla_minutos": "={{ $json.sla_minutos }}",
+            "margem_percentual": "={{ $json.margem_percentual || 0 }}",
+            "timestamp": "={{ $json.timestamp }}",
+            "status": "processado"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "pedido_id",
+              "displayName": "pedido_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false
+            },
+            {
+              "id": "cliente_id",
+              "displayName": "cliente_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false
+            },
+            {
+              "id": "canal",
+              "displayName": "canal",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false
+            },
+            {
+              "id": "categoria",
+              "displayName": "categoria",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false
+            },
+            {
+              "id": "itens",
+              "displayName": "itens",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false
+            },
+            {
+              "id": "total_itens",
+              "displayName": "total_itens",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false
+            },
+            {
+              "id": "prioridade",
+              "displayName": "prioridade",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false
+            },
+            {
+              "id": "prioridade_label",
+              "displayName": "prioridade_label",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false
+            },
+            {
+              "id": "sla_minutos",
+              "displayName": "sla_minutos",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false
+            },
+            {
+              "id": "margem_percentual",
+              "displayName": "margem_percentual",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false
+            },
+            {
+              "id": "timestamp",
+              "displayName": "timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        3968,
+        96
+      ],
+      "id": "6a05cb90-fbcd-4130-a3d5-8d19a6604041",
+      "name": "Armazenar Pedido Compra"
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "value": "yu9Yqai8wtQCXfOl",
+          "mode": "list",
+          "cachedResultName": "clientes_canais",
+          "cachedResultUrl": "/projects/RclsYmQ6XcS8ybpc/datatables/yu9Yqai8wtQCXfOl"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "cliente_id": "={{ $json.remetente }}",
+            "ultimo_canal": "={{ $json.canal }}",
+            "ultima_interacao": "={{ $json.timestamp }}",
+            "telefone": "={{ $json.canal === 'whatsapp' ? $json.remetente : '' }}",
+            "email": "={{ $json.canal === 'email'    ? $json.remetente : '' }}"
+          },
+          "matchingColumns": [
+            "cliente_id"
+          ],
+          "schema": [
+            {
+              "id": "cliente_id",
+              "displayName": "cliente_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false
+            },
+            {
+              "id": "ultimo_canal",
+              "displayName": "ultimo_canal",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false
+            },
+            {
+              "id": "ultima_interacao",
+              "displayName": "ultima_interacao",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false
+            },
+            {
+              "id": "telefone",
+              "displayName": "telefone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        4416,
+        96
+      ],
+      "id": "e97c0165-0f02-4043-8937-c3a721c9a956",
+      "name": "Atualizar Canal Cliente"
+    },
+    {
+      "parameters": {
+        "workflowId": "wg52aGyZh4lsDbFYJAtgL",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        4864,
+        96
+      ],
+      "id": "5851a700-d650-490b-8856-6a97bc77459c",
+      "name": "Chamar WF3 Ações (Compra)"
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "value": "ZQ3BR1wn5B6mYKFv",
+          "mode": "list",
+          "cachedResultName": "pedidos_proforma",
+          "cachedResultUrl": "/projects/RclsYmQ6XcS8ybpc/datatables/ZQ3BR1wn5B6mYKFv"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "proforma_id": "={{ $json.pedido_id }}",
+            "cliente_id": "={{ $json.remetente }}",
+            "canal": "={{ $json.canal }}",
+            "texto_original": "={{ $json.texto }}",
+            "texto_enriquecido": "={{ $json.texto_enriquecido }}",
+            "anexos": "={{ JSON.stringify($json.anexos) }}",
+            "timestamp": "={{ $json.timestamp }}",
+            "status": "aguarda_cotacao"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "proforma_id",
+              "displayName": "proforma_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false
+            },
+            {
+              "id": "cliente_id",
+              "displayName": "cliente_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false
+            },
+            {
+              "id": "canal",
+              "displayName": "canal",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false
+            },
+            {
+              "id": "texto_original",
+              "displayName": "texto_original",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false
+            },
+            {
+              "id": "texto_enriquecido",
+              "displayName": "texto_enriquecido",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false
+            },
+            {
+              "id": "anexos",
+              "displayName": "anexos",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false
+            },
+            {
+              "id": "timestamp",
+              "displayName": "timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false
+            },
+            {
+              "id": "arquivo_url",
+              "displayName": "arquivo_url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "data_envio_cliente",
+              "displayName": "data_envio_cliente",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        3296,
+        384
+      ],
+      "id": "b03563f7-95f5-42d1-a6b5-0e76b1182a79",
+      "name": "Armazenar Pedido Proforma"
+    },
+    {
+      "parameters": {
+        "workflowId": "wg52aGyZh4lsDbFYJAtgL",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        3744,
+        384
+      ],
+      "id": "c8c64045-384d-43e5-8e1f-2bd05c4862b3",
+      "name": "Chamar WF3 Ações (Proforma)"
+    },
+    {
+      "parameters": {
+        "jsCode": "return { json: { ...$json, pedido_id: 'OUT-' + Date.now(), tipo_pedido: 'outros', status: 'outros_sem_pedido' } };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2560,
+        496
+      ],
+      "id": "4d93fb85-0349-4388-beaf-eb32a576d841",
+      "name": "Tratar Outros"
+    },
+    {
+      "parameters": {
+        "workflowId": "wg52aGyZh4lsDbFYJAtgL",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        2848,
+        496
+      ],
+      "id": "c970a673-9ab6-497b-953b-a7e8ed3bd67b",
+      "name": "Chamar WF3 Ações (Outros)"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Busca os dados originais do nó \"Switch por Categoria\"\nconst dadosOriginais = $('Switch por Categoria').first().json;\n\n// 2. Obtém os dados do item que chegou a este nó (pode conter campos extras como 'itens' extraídos)\nconst itemAtual = $input.item.json;\n\n// 3. Mescla os dois objetos (prioriza campos do itemAtual, se houver conflito)\nconst dadosCompletos = {\n  ...dadosOriginais,\n  ...itemAtual\n};\n\n// 4. Adiciona os campos específicos da proforma\ndadosCompletos.pedido_id = 'PROF-' + new Date().toISOString().replace(/[-:T]/g, '').split('.')[0];\ndadosCompletos.tipo_pedido = 'proforma';\ndadosCompletos.status_proforma = 'aguarda_cotacao';\n\n// 5. Retorna o objeto enriquecido\nreturn { json: dadosCompletos };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3072,
+        384
+      ],
+      "id": "35c128f9-f102-43dd-8a1a-4f84e6e89edf",
+      "name": "Preparar Proforma"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "deepseek-chat",
+          "mode": "id"
+        },
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        1776,
+        576
+      ],
+      "id": "a3036906-7e82-41f9-9232-c447ad03e685",
+      "name": "OpenAI Chat Model (Classificador)",
+      "credentials": {
+        "openAiApi": {
+          "id": "UoyDT0E7U7RCeWCd",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "deepseek-chat",
+          "mode": "id"
+        },
+        "options": {
+          "timeout": 3000
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        2576,
+        320
+      ],
+      "id": "23eaf272-6ffe-49bc-ab50-a3ce2aa45bce",
+      "name": "OpenAI Chat Model (Extrator)",
+      "credentials": {
+        "openAiApi": {
+          "id": "UoyDT0E7U7RCeWCd",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -1440,
+        352
+      ],
+      "id": "a6520f1f-613d-4d91-bd41-aa8c9464c616",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Recupera o payload intacto que existia antes do Data Table o engolir\nreturn { json: $('Calcular Prioridade').first().json };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4192,
+        96
+      ],
+      "id": "fae1a64f-906c-402e-9bc3-b53d945776c8",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Recupera o payload intacto que existia antes do Data Table o engolir\nreturn { json: $('Preparar Proforma').first().json };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3520,
+        384
+      ],
+      "id": "88d4816c-a22f-4187-816b-0f959ab38627",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const axios = require('axios');\n\n// 1. CONFIGURAÇÕES\nconst API_KEY = 'ppEa5Z2guZyMxcGo4y8L4eDr222Wyvdd';\nconst dados = $json;\nlet texto_acumulado = '';\n\n// 2. EXTRAÇÃO E LIMPEZA\nlet anexos = [];\ntry {\n  anexos = typeof dados.anexos === 'string' ? JSON.parse(dados.anexos) : (dados.anexos || []);\n} catch (e) {\n  anexos = [];\n}\n\nconst imagens = anexos.filter(a =>\n  ['jpg', 'jpeg', 'png', 'webp'].includes((a.tipo || '').toLowerCase()) && a.base64\n);\n\nif (imagens.length === 0) {\n  return [{ json: { ...dados, texto_ocr: 'Nenhuma imagem encontrada' } }];\n}\n\n// 3. PROCESSAMENTO SEQUENCIAL\nfor (let i = 0; i < imagens.length; i++) {\n  try {\n    // Limpa o base64 e remove o prefixo se existir\n    let b64 = imagens[i].base64.replace(/\\s/g, '');\n    if (b64.includes(',')) b64 = b64.split(',')[1];\n\n    // Determina o mime type com base no campo \"tipo\"\n    const tipo = (imagens[i].tipo || 'jpeg').toLowerCase();\n    const mimeMap = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' };\n    const mimeType = mimeMap[tipo] || 'image/jpeg';\n\n    // ✅ FORMATO CORRETO: type \"image_url\" com data URI completo\n    const response = await axios.post(\n      'https://api.mistral.ai/v1/ocr',\n      {\n        model: \"mistral-ocr-latest\",\n        document: {\n          type: \"image_url\",\n          image_url: `data:${mimeType};base64,${b64}`\n        }\n      },\n      {\n        headers: {\n          'Authorization': `Bearer ${API_KEY}`,\n          'Content-Type': 'application/json'\n        },\n        timeout: 60000,\n        maxBodyLength: Infinity,\n        maxContentLength: Infinity\n      }\n    );\n\n    // Limpeza de memória imediata\n    b64 = null;\n    imagens[i].base64 = null;\n\n    if (response.data && response.data.pages) {\n      const markdown = response.data.pages.map(p => p.markdown).join('\\n');\n      texto_acumulado += (texto_acumulado ? '\\n\\n' : '') + markdown;\n    }\n\n  } catch (err) {\n    // Log detalhado do erro para debug\n    const status = err.response?.status || 'sem status';\n    const msg = err.response?.data?.message || err.response?.data?.detail || err.message;\n    texto_acumulado += `\\n[Erro Imagem ${i+1} | Status ${status}: ${msg}]`;\n  }\n\n  // Pausa entre requests para não sobrecarregar a API\n  if (i < imagens.length - 1) {\n    await new Promise(r => setTimeout(r, 300));\n  }\n}\n\n// 4. RETORNO LIMPO (mantém anexos e message_raw, apenas limpa base64 das imagens)\nconst output = { ...dados };\n\n// Opcional: remove base64 das imagens já processadas para reduzir payload\nif (output.anexos && Array.isArray(output.anexos)) {\n  output.anexos = output.anexos.map(a => {\n    if (['jpg','jpeg','png','webp'].includes((a.tipo || '').toLowerCase())) {\n      const { base64, ...rest } = a;\n      return rest; // remove base64 da imagem\n    }\n    return a;\n  });\n}\n\noutput.texto_ocr = texto_acumulado;\n\n// NÃO delete output.anexos;\n// NÃO delete output.message_raw;\n\nreturn [{ json: output }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -544,
+        256
+      ],
+      "id": "7c6bcdcc-180a-48ec-94cb-d4695cd40525",
+      "name": "Processar Todas as Imagens"
+    },
+    {
+      "parameters": {
+        "jsCode": "const axios = require('axios');\nconst XLSX  = require('xlsx');\n\nconst API_KEY = 'ppEa5Z2guZyMxcGo4y8L4eDr222Wyvdd';\nconst dados = { ...$json };\n\n// ══════════════════════════════════════════════════════════════════════\n// 1. EXTRACTOR DE BASE64 — 3 estratégias em cascata\n//\n// O problema: a Evolution API envia o array `anexos` com base64 vazio (\"\"),\n// mas coloca o conteúdo real dentro do message_raw com 3 níveis de escape:\n//\n//   message_raw (string)\n//     └─ JSON.parse → [ \"[\\\"...\\\"]\", \"[\\\"...\\\"]\", ... ]  (array por mensagem)\n//           └─ JSON.parse → [ \"{\\\"documentMessage\\\":{...},\\\"base64\\\":\\\"...\\\"}\" ]\n//                 └─ JSON.parse → { documentMessage: {...}, base64: \"UEsDB...\" }\n// ══════════════════════════════════════════════════════════════════════\n\nlet todosExcels = [];\n\n// ── Estratégia A: array anexos com base64 preenchido (caso ideal) ──────\ntry {\n  const lista = typeof dados.anexos === 'string'\n    ? JSON.parse(dados.anexos)\n    : (dados.anexos || []);\n\n  const comBase64 = lista.filter(a =>\n    ['xlsx', 'xls', 'csv'].includes((a.tipo || '').toLowerCase()) &&\n    a.base64 && a.base64.trim() !== ''\n  );\n\n  if (comBase64.length > 0) todosExcels = comBase64;\n} catch (e) {}\n\n// ── Estratégia B: message_raw (Evolution API — 3 níveis de JSON) ────────\nif (todosExcels.length === 0 && dados.message_raw) {\n  try {\n    // Nível 1: message_raw string → array de strings (uma por mensagem)\n    const nivel1 = typeof dados.message_raw === 'string'\n      ? JSON.parse(dados.message_raw)\n      : dados.message_raw;\n\n    const arrayNivel1 = Array.isArray(nivel1) ? nivel1 : [nivel1];\n\n    for (const itemNivel1 of arrayNivel1) {\n      try {\n        // Nível 2: cada string → array de strings internas\n        const nivel2 = typeof itemNivel1 === 'string'\n          ? JSON.parse(itemNivel1)\n          : itemNivel1;\n\n        const arrayNivel2 = Array.isArray(nivel2) ? nivel2 : [nivel2];\n\n        for (const itemNivel2 of arrayNivel2) {\n          try {\n            // Nível 3: cada string interna → objeto da mensagem real\n            const msgObj = typeof itemNivel2 === 'string'\n              ? JSON.parse(itemNivel2)\n              : itemNivel2;\n\n            // Verifica se é documento Excel\n            const docMsg = msgObj.documentMessage;\n            if (!docMsg) continue;\n\n            const mime      = (docMsg.mimetype  || '').toLowerCase();\n            const fileName  = (docMsg.fileName  || docMsg.title || '').toLowerCase();\n            const b64       = msgObj.base64 || docMsg.base64 || '';\n\n            const isExcel =\n              mime.includes('spreadsheet') ||\n              mime.includes('excel')       ||\n              mime.includes('csv')         ||\n              /\\.(xlsx|xls|csv)$/.test(fileName);\n\n            if (isExcel && b64.trim() !== '') {\n              todosExcels.push({\n                base64: b64,\n                tipo:   mime.includes('csv') ? 'csv' : 'xlsx',\n                nome:   docMsg.fileName || docMsg.title || 'documento.xlsx'\n              });\n            }\n          } catch (e3) { continue; }\n        }\n      } catch (e2) { continue; }\n    }\n  } catch (e1) {}\n}\n\n// ── Estratégia C: base64 na raiz do JSON (fallback genérico) ───────────\nif (todosExcels.length === 0 && dados.base64 && dados.base64.trim() !== '') {\n  const tipo = (dados.tipo || 'xlsx').toLowerCase();\n  if (['xlsx', 'xls', 'csv'].includes(tipo)) {\n    todosExcels.push({\n      base64: dados.base64,\n      tipo,\n      nome: dados.nome_arquivo || 'arquivo.xlsx'\n    });\n  }\n}\n\nif (todosExcels.length === 0) {\n  throw new Error(\n    'Base64 do Excel não encontrado em nenhuma das 3 estratégias (anexos, message_raw, raiz). ' +\n    'Verifica se o message_raw está a ser enviado pelo WF anterior.'\n  );\n}\n\n// ══════════════════════════════════════════════════════════════════════\n// 2. PROCESSAR CADA FICHEIRO EXCEL ENCONTRADO\n// ══════════════════════════════════════════════════════════════════════\n\nlet textoAcumulado = '';\nconst folhasAcumuladas = [];\nconst MAX_LINHAS = 100;\n\nfor (let idx = 0; idx < todosExcels.length; idx++) {\n  const excelItem    = todosExcels[idx];\n  const nomeArquivo  = excelItem.nome || `Excel ${idx + 1}`;\n\n  try {\n    // Limpar e decodificar base64\n    let cleanB64 = (excelItem.base64 || '').replace(/\\s/g, '');\n    if (cleanB64.includes(',')) cleanB64 = cleanB64.split(',')[1];\n\n    if (!cleanB64) {\n      textoAcumulado += `\\n[Excel ${idx+1} (${nomeArquivo}): base64 vazio após limpeza]`;\n      continue;\n    }\n\n    let buffer = Buffer.from(cleanB64, 'base64');\n    cleanB64 = null; // Libera memória\n\n    // Ler workbook com SheetJS\n    let workbook;\n    try {\n      workbook = XLSX.read(buffer, { type: 'buffer', cellDates: true });\n    } catch (err) {\n      textoAcumulado += `\\n[Excel ${idx+1} (${nomeArquivo}): Ficheiro corrompido — ${err.message}]`;\n      continue;\n    }\n    buffer = null;\n\n    if (!workbook.SheetNames || workbook.SheetNames.length === 0) {\n      textoAcumulado += `\\n[Excel ${idx+1} (${nomeArquivo}): Nenhuma folha encontrada]`;\n      continue;\n    }\n\n    // Converter cada folha para CSV\n    let conteudoExcel = '';\n    for (const nomeFolha of workbook.SheetNames) {\n      const folha      = workbook.Sheets[nomeFolha];\n      const dadosFolha = XLSX.utils.sheet_to_json(folha, {\n        header: 1, defval: '', blankrows: false\n      });\n      if (dadosFolha.length === 0) continue;\n\n      const dadosLimitados = dadosFolha.slice(0, MAX_LINHAS);\n      const csv = XLSX.utils.sheet_to_csv(\n        XLSX.utils.aoa_to_sheet(dadosLimitados),\n        { blankrows: false }\n      );\n\n      folhasAcumuladas.push({\n        arquivo:         nomeArquivo,\n        nome:            nomeFolha,\n        linhas_totais:   dadosFolha.length,\n        linhas_enviadas: dadosLimitados.length\n      });\n\n      conteudoExcel += `### Ficheiro: \"${nomeArquivo}\" | Folha: \"${nomeFolha}\"\\n\\`\\`\\`csv\\n${csv}\\n\\`\\`\\`\\n\\n`;\n    }\n    workbook = null;\n\n    if (!conteudoExcel) {\n      textoAcumulado += `\\n[Excel ${idx+1} (${nomeArquivo}): Nenhum dado nas folhas]`;\n      continue;\n    }\n\n    // ── Chamar Mistral para converter CSV em tabela Markdown limpa ──────\n    let analise = '';\n    try {\n      const mistralResp = await axios.post(\n        'https://api.mistral.ai/v1/chat/completions',\n        {\n          model: 'mistral-large-latest',\n          messages: [\n            {\n              role: 'system',\n              content: 'Responde exclusivamente com a tabela Markdown extraída do CSV. ' +\n                       'Nada de textos, análises, metadados, linhas de separador, ' +\n                       '[object Object] ou frases como \"aqui estão\". ' +\n                       'Começa logo com | e termina na última linha da tabela.'\n            },\n            {\n              role: 'user',\n              content: `Analisa este ficheiro:\\n\\n${conteudoExcel}`\n            }\n          ],\n          max_tokens:  4096,\n          temperature: 0.1\n        },\n        {\n          headers: {\n            'Authorization': `Bearer ${API_KEY}`,\n            'Content-Type':  'application/json'\n          },\n          timeout: 90000\n        }\n      );\n      analise = mistralResp.data.choices[0].message.content;\n    } catch (err) {\n      const msg = err.response?.data?.message || err.response?.data?.detail || err.message;\n      analise = `[Erro Mistral: ${msg}]`;\n    }\n    conteudoExcel = null;\n\n    // Acumular resultado (com separador se houver múltiplos ficheiros)\n    const prefixo = todosExcels.length > 1\n      ? `**Ficheiro ${idx+1}: ${nomeArquivo}**\\n\\n`\n      : '';\n    textoAcumulado += (textoAcumulado ? '\\n\\n─────────────────\\n\\n' : '') + prefixo + analise;\n\n  } catch (err) {\n    textoAcumulado += `\\n[Erro inesperado Excel ${idx+1} (${nomeArquivo}): ${err.message}]`;\n  }\n\n  // Pausa entre ficheiros para não sobrecarregar a API\n  if (idx < todosExcels.length - 1) {\n    await new Promise(r => setTimeout(r, 500));\n  }\n}\n\n// ══════════════════════════════════════════════════════════════════════\n// 3. RETORNO LIMPO — remove campos pesados para não crashar o n8n\n// ══════════════════════════════════════════════════════════════════════\n\nconst output = { ...dados };\ndelete output.anexos;\ndelete output.message_raw;\ndelete output.base64;\n\noutput.texto_excel  = textoAcumulado;\noutput.folhas_excel = folhasAcumuladas;\n\nreturn [{ json: output }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        352,
+        256
+      ],
+      "id": "52d1ea8a-8b62-41ff-9ace-3f5cff77a20f",
+      "name": "Code in JavaScript2"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Dados originais completos (antes do Data Table o engolir)\nconst dadosOriginais = $('Code in JavaScript').first().json;  \n\n// Dados da tabela (saída do Atualizar Canal Cliente)\nconst dadosTabela = $json;\n\n// Junta tudo: mantém os originais e adiciona/sobrescreve com os da tabela\nconst dadosCompletos = {\n  ...dadosOriginais,\n  ...dadosTabela\n};\n\nreturn { json: dadosCompletos };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4640,
+        96
+      ],
+      "id": "8a227197-7550-42a0-bc8b-2482f6b16a8e",
+      "name": "Code in JavaScript3"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Recebe todos os itens do workflow anterior\nconst items = $input.all();\n\n// Inicializa objeto consolidado\nlet consolidated = {\n  canal: null,\n  remetente: null,\n  assunto: \"\",\n  texto: \"\",\n  texto_pdf: \"\",\n  anexos: [],\n  message_raw: [],\n  timestamp: null,\n  ids: []\n};\n\n// Percorre os itens na ordem recebida (importante para rastreabilidade)\nfor (const item of items) {\n  const data = item.json;\n  \n  // Preenche campos comuns (pega do primeiro que tiver valor)\n  if (!consolidated.canal && data.canal) consolidated.canal = data.canal;\n  if (!consolidated.remetente && data.remetente) consolidated.remetente = data.remetente;\n  if (!consolidated.timestamp && data.timestamp) consolidated.timestamp = data.timestamp;\n  \n  // Concatena textos (preserva ordem)\n  if (data.texto && data.texto.trim()) {\n    consolidated.texto += (consolidated.texto ? \" \" : \"\") + data.texto.trim();\n  }\n  \n  // Concatena texto_pdf (se houver)\n  if (data.texto_pdf && data.texto_pdf.trim()) {\n    consolidated.texto_pdf += (consolidated.texto_pdf ? \"\\n\\n\" : \"\") + data.texto_pdf.trim();\n  }\n  \n  // Concatena anexos (preserva ordem)\n  let anexosItem = [];\n  try {\n    anexosItem = typeof data.anexos === 'string' ? JSON.parse(data.anexos) : (data.anexos || []);\n  } catch(e) { anexosItem = []; }\n  \n  consolidated.anexos.push(...anexosItem);\n  \n  // Concatena message_raw (útil para debug)\n  if (data.message_raw) {\n    let raw = typeof data.message_raw === 'string' ? data.message_raw : JSON.stringify(data.message_raw);\n    consolidated.message_raw.push(raw);\n  }\n  \n  // Concatena ids\n  if (data.ids && Array.isArray(data.ids)) {\n    consolidated.ids.push(...data.ids);\n  }\n}\n\n// Remove duplicatas de anexos (baseado no nome + tipo + tamanho aproximado)\nconst uniqueAnexos = [];\nconst keys = new Set();\nfor (const anexo of consolidated.anexos) {\n  const key = `${anexo.tipo}|${anexo.nome || ''}|${(anexo.base64 || '').length}`;\n  if (!keys.has(key)) {\n    keys.add(key);\n    uniqueAnexos.push(anexo);\n  }\n}\nconsolidated.anexos = uniqueAnexos;\n\n// Garante que message_raw seja string (opcional)\nconsolidated.message_raw = consolidated.message_raw.length ? JSON.stringify(consolidated.message_raw) : \"\";\n\nreturn [{ json: consolidated }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1216,
+        352
+      ],
+      "id": "2202aa69-87a2-4f5e-9eb6-bbe90d7bba79",
+      "name": "Agregador"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "8f6470cd-790d-481c-ba08-33137442e867",
+              "leftValue": "={{ $('Switch por Categoria').item.json.categoria }}",
+              "rightValue": "compra",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2848,
+        192
+      ],
+      "id": "a8965cc6-570f-46e7-9564-f96508e5d7c9",
+      "name": "If"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Identificar Tipos de Anexos": {
+      "main": [
+        [
+          {
+            "node": "Tem Imagem?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tem Imagem?": {
+      "main": [
+        [
+          {
+            "node": "Processar Todas as Imagens",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Sem Imagem",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sem Imagem": {
+      "main": [
+        [
+          {
+            "node": "Tem PDF?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Processar Todas as Imagens": {
+      "main": [
+        [
+          {
+            "node": "Tem PDF?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tem PDF?": {
+      "main": [
+        [
+          {
+            "node": "Parsear PDF",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Sem PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parsear PDF": {
+      "main": [
+        [
+          {
+            "node": "Tem Excel?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sem PDF": {
+      "main": [
+        [
+          {
+            "node": "Tem Excel?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tem Excel?": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Sem Excel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript2": {
+      "main": [
+        [
+          {
+            "node": "Parsear Excel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parsear Excel": {
+      "main": [
+        [
+          {
+            "node": "Tem Áudio?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sem Excel": {
+      "main": [
+        [
+          {
+            "node": "Tem Áudio?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tem Áudio?": {
+      "main": [
+        [
+          {
+            "node": "Processar Todos os Áudios",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Sem Áudio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Processar Todos os Áudios": {
+      "main": [
+        [
+          {
+            "node": "Parsear Transcrição",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parsear Transcrição": {
+      "main": [
+        [
+          {
+            "node": "Montar Texto Enriquecido",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sem Áudio": {
+      "main": [
+        [
+          {
+            "node": "Montar Texto Enriquecido",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Montar Texto Enriquecido": {
+      "main": [
+        [
+          {
+            "node": "Classificador IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classificador IA": {
+      "main": [
+        [
+          {
+            "node": "Parsear Classificação",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parsear Classificação": {
+      "main": [
+        [
+          {
+            "node": "Switch por Categoria",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch por Categoria": {
+      "main": [
+        [
+          {
+            "node": "Extrator de Itens IA",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Tratar Outros",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extrator de Itens IA": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gerar Tabela Estruturada": {
+      "main": [
+        [
+          {
+            "node": "Fase 2 Ativa? (Margem ERP)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fase 2 Ativa? (Margem ERP)": {
+      "main": [
+        [
+          {
+            "node": "Buscar Margem Cliente (ERP)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Margem Padrão (Fase 1)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Margem Cliente (ERP)": {
+      "main": [
+        [
+          {
+            "node": "Calcular Prioridade",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Margem Padrão (Fase 1)": {
+      "main": [
+        [
+          {
+            "node": "Calcular Prioridade",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calcular Prioridade": {
+      "main": [
+        [
+          {
+            "node": "Armazenar Pedido Compra",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Armazenar Pedido Compra": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Atualizar Canal Cliente": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Armazenar Pedido Proforma": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tratar Outros": {
+      "main": [
+        [
+          {
+            "node": "Chamar WF3 Ações (Outros)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Proforma": {
+      "main": [
+        [
+          {
+            "node": "Armazenar Pedido Proforma",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model (Classificador)": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Classificador IA",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model (Extrator)": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Extrator de Itens IA",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Agregador",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Atualizar Canal Cliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Chamar WF3 Ações (Proforma)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript3": {
+      "main": [
+        [
+          {
+            "node": "Chamar WF3 Ações (Compra)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agregador": {
+      "main": [
+        [
+          {
+            "node": "Identificar Tipos de Anexos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Gerar Tabela Estruturada",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Preparar Proforma",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "a3134388-7aab-4a31-84f9-9ef0fd4e1d15",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a3e28e7b586d14db8caaa6c56886e565eafa5758030b4faf5ace5b13f242eb87"
+  },
+  "id": "qoQxogdREeaaXkntFLl0z",
+  "tags": []
+}
