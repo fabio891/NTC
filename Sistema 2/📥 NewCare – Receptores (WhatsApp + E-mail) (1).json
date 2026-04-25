@@ -1,0 +1,460 @@
+{
+  "name": "📥 NewCare – Receptores (WhatsApp + E-mail)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "newcare",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -720,
+        64
+      ],
+      "id": "b80dfb28-7b14-4c85-b665-13e27881f3e9",
+      "name": "Webhook Post1",
+      "webhookId": "3ba3ec48-885e-4dd9-bd0d-0ffda9e0dc84"
+    },
+    {
+      "parameters": {
+        "jsCode": "const crypto = require('crypto');\nconst https  = require('https');\n\nconst agora = new Date().toISOString();\nconst items = $input.all();\nconst results = [];\n\n// ─── Auxiliares ──────────────────────────────────────────────\nfunction mimeToExt(mime) {\n  if (!mime) return 'jpg';\n  if (mime.includes('jpeg') || mime.includes('jpg')) return 'jpg';\n  if (mime.includes('png'))  return 'png';\n  if (mime.includes('webp')) return 'webp';\n  return 'img';\n}\n\nfunction toBase64String(val) {\n  if (typeof val !== 'string') return '';\n  const v = val.trim();\n  if (!v) return '';\n  return v.includes(',') ? v.split(',')[1] : v;\n}\n\nfunction extrairEmailDeString(texto) {\n  const match = texto.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}/);\n  return match ? match[0] : texto;\n}\n\nfunction numericObjToBuffer(obj) {\n  if (!obj || typeof obj !== 'object') return null;\n  const keys = Object.keys(obj);\n  if (keys.length === 0) return null;\n  if (!keys.every(k => /^\\d+$/.test(k))) return null;\n  if (!Object.values(obj).every(v => typeof v === 'number' && v >= 0 && v <= 255)) return null;\n  const bytes = new Uint8Array(keys.length);\n  for (let i = 0; i < keys.length; i++) bytes[i] = obj[i];\n  return Buffer.from(bytes);\n}\n\nfunction getMediaKeyBuffer(mediaKeyRaw) {\n  if (!mediaKeyRaw) return null;\n  if (typeof mediaKeyRaw === 'string') return Buffer.from(mediaKeyRaw, 'base64');\n  if (typeof mediaKeyRaw === 'object') return numericObjToBuffer(mediaKeyRaw);\n  return null;\n}\n\nfunction fixBufferFields(obj) {\n  if (!obj || typeof obj !== 'object') return obj;\n  const keys = Object.keys(obj);\n  const isNumericByteArray =\n    keys.length > 0 &&\n    keys.every(k => /^\\d+$/.test(k)) &&\n    Object.values(obj).every(v => typeof v === 'number' && v >= 0 && v <= 255);\n  if (isNumericByteArray) {\n    const bytes = new Uint8Array(keys.length);\n    for (let i = 0; i < keys.length; i++) bytes[i] = obj[i];\n    return Buffer.from(bytes).toString('base64');\n  }\n  const result = Array.isArray(obj) ? [] : {};\n  for (const k of keys) result[k] = fixBufferFields(obj[k]);\n  return result;\n}\n\n// ─── Info strings WhatsApp ────────────────────────────────────\n// O tipo de info string é determinado pelo mimetype REAL,\n// não pelo tipo de mensagem (documentMessage pode conter audio!)\nfunction getMediaInfoString(messageObj) {\n  // Determinar pelo objecto de mensagem presente\n  if (messageObj.imageMessage)   return 'WhatsApp Image Keys';\n  if (messageObj.videoMessage)   return 'WhatsApp Video Keys';\n  if (messageObj.audioMessage)   return 'WhatsApp Audio Keys';\n  if (messageObj.stickerMessage) return 'WhatsApp Image Keys';\n  if (messageObj.documentMessage) {\n    const mime = messageObj.documentMessage.mimetype || '';\n    // documentMessage pode conter audio (ex: audio/ogg enviado como documento)\n    if (mime.startsWith('audio/')) return 'WhatsApp Audio Keys';\n    if (mime.startsWith('video/')) return 'WhatsApp Video Keys';\n    if (mime.startsWith('image/')) return 'WhatsApp Image Keys';\n    return 'WhatsApp Document Keys';\n  }\n  return 'WhatsApp Document Keys';\n}\n\n// ─── HKDF expand-only (como o Baileys / Baileys-WhiskeySockets) ──\n// NÃO faz extract — usa o mediaKey directamente como PRK\nfunction hkdfExpandOnly(prk, length, info) {\n  const infoBuffer = Buffer.from(info, 'utf8');\n  let okm = Buffer.alloc(0);\n  let t   = Buffer.alloc(0);\n  const n = Math.ceil(length / 32);\n  for (let i = 1; i <= n; i++) {\n    const hmac = crypto.createHmac('sha256', prk);\n    hmac.update(t);\n    hmac.update(infoBuffer);\n    hmac.update(Buffer.from([i]));\n    t   = hmac.digest();\n    okm = Buffer.concat([okm, t]);\n  }\n  return okm.slice(0, length);\n}\n\n// Tenta hkdfSync nativo (Node 15+) com salt=zeros como fallback\nfunction hkdfWithExtract(ikm, length, info) {\n  try {\n    return Buffer.from(\n      crypto.hkdfSync('sha256', ikm, Buffer.alloc(32, 0), Buffer.from(info, 'utf8'), length)\n    );\n  } catch (e) {\n    // fallback manual (extract + expand)\n    const prk = crypto.createHmac('sha256', Buffer.alloc(32, 0)).update(ikm).digest();\n    return hkdfExpandOnly(prk, length, info);\n  }\n}\n\n// ─── Download via https ────────────────────────────────────────\nfunction httpsGetBuffer(url) {\n  return new Promise((resolve, reject) => {\n    const req = https.get(url, {\n      headers: { 'User-Agent': 'WhatsApp/2.24.6.77 A' },\n      timeout: 20000,\n    }, (res) => {\n      if (res.statusCode !== 200) {\n        res.resume();\n        return reject(new Error(`HTTP ${res.statusCode}`));\n      }\n      const chunks = [];\n      res.on('data',  c => chunks.push(c));\n      res.on('end',   () => resolve(Buffer.concat(chunks)));\n      res.on('error', reject);\n    });\n    req.on('error',   reject);\n    req.on('timeout', () => { req.destroy(); reject(new Error('Timeout')); });\n  });\n}\n\n// ─── Desencriptação principal ──────────────────────────────────\nasync function decryptWhatsAppMedia(url, mediaKeyRaw, infoString) {\n  if (!url || !mediaKeyRaw) return { base64: '', err: 'url ou mediaKey em falta' };\n\n  const mediaKey = getMediaKeyBuffer(mediaKeyRaw);\n  if (!mediaKey || mediaKey.length < 32)\n    return { base64: '', err: `mediaKey inválida (len=${mediaKey?.length})` };\n\n  // Download\n  let encBuffer;\n  try {\n    encBuffer = await httpsGetBuffer(url);\n  } catch (e1) {\n    // fallback: fetch global\n    try {\n      const r = await fetch(url, { headers: { 'User-Agent': 'WhatsApp/2.24.6.77 A' } });\n      if (!r.ok) return { base64: '', err: `CDN HTTP ${r.status}` };\n      encBuffer = Buffer.from(await r.arrayBuffer());\n    } catch (e2) {\n      return { base64: '', err: `download falhou: ${e1.message} | fetch: ${e2.message}` };\n    }\n  }\n\n  if (encBuffer.length < 11)\n    return { base64: '', err: `ficheiro demasiado pequeno: ${encBuffer.length}b` };\n\n  const fileData = encBuffer.slice(0, encBuffer.length - 10);\n\n  // Tentativa 1: expand-only (Baileys padrão)\n  try {\n    const exp1      = hkdfExpandOnly(mediaKey, 112, infoString);\n    const iv1       = exp1.slice(0,  16);\n    const ckey1     = exp1.slice(16, 48);\n    const decipher1 = crypto.createDecipheriv('aes-256-cbc', ckey1, iv1);\n    decipher1.setAutoPadding(true);\n    const dec1 = Buffer.concat([decipher1.update(fileData), decipher1.final()]);\n    return { base64: dec1.toString('base64'), err: null, method: 'expand-only' };\n  } catch (e1) {\n    // Tentativa 2: extract + expand (RFC 5869 com salt=zeros)\n    try {\n      const exp2      = hkdfWithExtract(mediaKey, 112, infoString);\n      const iv2       = exp2.slice(0,  16);\n      const ckey2     = exp2.slice(16, 48);\n      const decipher2 = crypto.createDecipheriv('aes-256-cbc', ckey2, iv2);\n      decipher2.setAutoPadding(true);\n      const dec2 = Buffer.concat([decipher2.update(fileData), decipher2.final()]);\n      return { base64: dec2.toString('base64'), err: null, method: 'extract+expand' };\n    } catch (e2) {\n      return { base64: '', err: `AES expand-only: ${e1.message} | extract+expand: ${e2.message}` };\n    }\n  }\n}\n\n// ─── Loop principal ───────────────────────────────────────────\nfor (let i = 0; i < items.length; i++) {\n  const item    = items[i];\n  const input   = item.json;\n  const body    = input.body || {};\n  const data    = body.data  || {};\n  const message = data.message || {};\n\n  if (body.event === 'messages.upsert') {\n    if (data.key?.fromMe === true) continue;\n\n    const texto =\n      message.conversation                ||\n      message.extendedTextMessage?.text   ||\n      message.listResponseMessage?.title  ||\n      '';\n    const anexos    = [];\n    const debugInfo = [];\n\n    // Determinar info string pelo tipo REAL de conteúdo\n    const infoString = getMediaInfoString(message);\n\n    // ── Imagem ────────────────────────────────────────────────\n    if (message.imageMessage) {\n      const mime     = message.imageMessage.mimetype || 'image/jpeg';\n      const extensao = mimeToExt(mime);\n      let base64     = '';\n\n      if (typeof message.base64 === 'string' && message.base64)\n        base64 = toBase64String(message.base64);\n      else if (typeof message.imageMessage.base64 === 'string' && message.imageMessage.base64)\n        base64 = toBase64String(message.imageMessage.base64);\n      else {\n        const r = await decryptWhatsAppMedia(message.imageMessage.url, message.imageMessage.mediaKey, 'WhatsApp Image Keys');\n        base64 = r.base64;\n        if (r.err) debugInfo.push({ image: r.err });\n        else debugInfo.push({ image: `OK (${r.method})` });\n      }\n      anexos.push({ tipo: extensao, mime, base64 });\n    }\n\n    // ── Áudio ─────────────────────────────────────────────────\n    if (message.audioMessage) {\n      let base64 = '';\n      if (typeof message.base64 === 'string' && message.base64)\n        base64 = toBase64String(message.base64);\n      else if (typeof message.audioMessage.base64 === 'string' && message.audioMessage.base64)\n        base64 = toBase64String(message.audioMessage.base64);\n      else {\n        const r = await decryptWhatsAppMedia(message.audioMessage.url, message.audioMessage.mediaKey, 'WhatsApp Audio Keys');\n        base64 = r.base64;\n        if (r.err) debugInfo.push({ audio: r.err });\n        else debugInfo.push({ audio: `OK (${r.method})` });\n      }\n      anexos.push({ tipo: 'ogg', mime: 'audio/ogg', base64 });\n    }\n\n    // ── Documento ─────────────────────────────────────────────\n    if (message.documentMessage) {\n      const nomeArquivo = message.documentMessage.fileName || 'documento.pdf';\n      const extensao    = nomeArquivo.split('.').pop().toLowerCase() || 'pdf';\n      let base64        = '';\n\n      if (typeof message.documentMessage.base64 === 'string' && message.documentMessage.base64)\n        base64 = toBase64String(message.documentMessage.base64);\n      else if (typeof message.documentMessage.fileData === 'string' && message.documentMessage.fileData)\n        base64 = toBase64String(message.documentMessage.fileData);\n      else {\n        const r = await decryptWhatsAppMedia(message.documentMessage.url, message.documentMessage.mediaKey, infoString);\n        base64 = r.base64;\n        if (r.err) debugInfo.push({ document: r.err });\n        else debugInfo.push({ document: `OK via ${r.method}` });\n      }\n      anexos.push({ tipo: extensao, nome: nomeArquivo, mime: message.documentMessage.mimetype || 'application/octet-stream', base64 });\n    }\n\n    // ── Vídeo ─────────────────────────────────────────────────\n    if (message.videoMessage) {\n      const mime     = message.videoMessage.mimetype || 'video/mp4';\n      const extensao = mime.includes('mp4') ? 'mp4' : 'video';\n      let base64     = '';\n      if (typeof message.videoMessage.base64 === 'string' && message.videoMessage.base64)\n        base64 = toBase64String(message.videoMessage.base64);\n      else {\n        const r = await decryptWhatsAppMedia(message.videoMessage.url, message.videoMessage.mediaKey, 'WhatsApp Video Keys');\n        base64 = r.base64;\n        if (r.err) debugInfo.push({ video: r.err });\n        else debugInfo.push({ video: `OK (${r.method})` });\n      }\n      anexos.push({ tipo: extensao, mime, base64 });\n    }\n\n    const messageLimpa = fixBufferFields(message);\n\n    results.push({\n      json: {\n        canal:       'whatsapp',\n        remetente:   data.key?.remoteJid || body.sender || '',\n        assunto:     '',\n        texto,\n        anexos:      JSON.stringify(anexos),\n        message_raw: JSON.stringify(messageLimpa),\n        timestamp:   body.date_time || agora,\n        status:      'pendente',\n        _debug:      debugInfo.length ? JSON.stringify(debugInfo) : undefined,\n      },\n    });\n\n  } else if (input.from || body.from) {\n    const mail = input.from ? input : body;\n    let remetente = '';\n    if (typeof mail.from === 'string') {\n      remetente = mail.from;\n    } else if (mail.from && typeof mail.from === 'object') {\n      if (mail.from.value?.length && mail.from.value[0]?.address) remetente = mail.from.value[0].address;\n      else if (mail.from.text) remetente = mail.from.text;\n      else remetente = JSON.stringify(mail.from);\n    }\n    remetente = extrairEmailDeString(remetente);\n\n    const anexosProcessados = [];\n    const binaryOut         = {};\n    let   anexoIdx          = 0;\n    if (item.binary) {\n      for (const key of Object.keys(item.binary)) {\n        try {\n          const buffer = await this.helpers.getBinaryDataBuffer(i, key);\n          const b64    = buffer.toString('base64');\n          const bInfo  = item.binary[key];\n          anexosProcessados.push({ tipo: (bInfo.fileExtension || 'bin').toLowerCase(), nome: bInfo.fileName || key, mime: bInfo.mimeType || 'application/octet-stream', base64: b64 });\n          binaryOut[`anexo_${anexoIdx++}`] = { data: b64, mimeType: bInfo.mimeType, fileName: bInfo.fileName };\n        } catch (err) { continue; }\n      }\n    }\n    results.push({\n      json: {\n        canal:     'email',\n        remetente,\n        assunto:   mail.subject || '',\n        texto:     mail.text || mail.html || '',\n        anexos:    JSON.stringify(anexosProcessados),\n        timestamp: mail.date ? new Date(mail.date).toISOString() : agora,\n        status:    'pendente',\n      },\n      binary: Object.keys(binaryOut).length > 0 ? binaryOut : undefined,\n    });\n  }\n}\n\nreturn results;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -464,
+        192
+      ],
+      "id": "d19c3f9a-b270-4e68-9b36-603843a2fbca",
+      "name": "Padronizar Mensagem",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "d8c21077-b6f3-4fe4-8821-be5f7ac49137",
+              "leftValue": "={{ $json.anexos.includes('\"tipo\":\"pdf\"') }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -240,
+        192
+      ],
+      "id": "45a69400-53f9-4653-a6b4-c3f4d6368ebd",
+      "name": "If PDF?"
+    },
+    {
+      "parameters": {
+        "link": "={{ JSON.parse($json.message_raw).documentMessage.url }}",
+        "mediaKey": "={{ JSON.parse($json.message_raw).documentMessage.mediaKey }}",
+        "tipo": "pdf"
+      },
+      "type": "n8n-nodes-whatsapp-decrypt.whatsAppMediaDecrypt",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "1cd9ff1c-c7d2-4704-9359-e21fd4162378",
+      "name": "WhatsApp Decrypt"
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        224,
+        0
+      ],
+      "id": "74552f4b-1e34-45a5-9b93-940426632e5c",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "jsCode": "const dadosOriginais = $('Padronizar Mensagem').first().json;\nconst textoExtraido = $json.text || $json.content || '';\n\nlet anexos = [];\ntry {\n  anexos = JSON.parse(dadosOriginais.anexos || '[]');\n} catch(e) { anexos = []; }\n\nreturn {\n  json: {\n    ...dadosOriginais,\n    anexos: JSON.stringify(anexos),\n    texto_pdf: textoExtraido,\n    message_raw: dadosOriginais.message_raw,\n    status: dadosOriginais.status || \"pendente\"\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        496,
+        0
+      ],
+      "id": "0e906c87-0ac3-4202-bc7e-2520c37aed12",
+      "name": "Adicionar texto_pdf"
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "value": "D5EPS46KjgFgJWgy",
+          "mode": "list",
+          "cachedResultName": "mensagens_recebidas",
+          "cachedResultUrl": "/projects/RclsYmQ6XcS8ybpc/datatables/D5EPS46KjgFgJWgy"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "canal": "={{ $json.canal }}",
+            "remetente": "={{ $json.remetente }}",
+            "assunto": "={{ $json.assunto }}",
+            "texto": "={{ $json.texto }}",
+            "anexos": "={{ $json.anexos }}",
+            "timestamp": "={{ $json.timestamp }}",
+            "processado": "={{ $json.status }}",
+            "message_raw": "={{ $json.message_raw }}",
+            "texto_pdf": "={{ $json.texto_pdf }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "canal",
+              "displayName": "canal",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false
+            },
+            {
+              "id": "remetente",
+              "displayName": "remetente",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false
+            },
+            {
+              "id": "assunto",
+              "displayName": "assunto",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false
+            },
+            {
+              "id": "texto",
+              "displayName": "texto",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false
+            },
+            {
+              "id": "anexos",
+              "displayName": "anexos",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false
+            },
+            {
+              "id": "timestamp",
+              "displayName": "timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false
+            },
+            {
+              "id": "processado",
+              "displayName": "processado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "message_raw",
+              "displayName": "message_raw",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false
+            },
+            {
+              "id": "texto_pdf",
+              "displayName": "texto_pdf",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        432,
+        208
+      ],
+      "id": "440c22ba-68c1-47a2-81d1-6f77fea6b13a",
+      "name": "Armazenar Mensagem Bruta"
+    },
+    {
+      "parameters": {
+        "format": "resolved",
+        "options": {
+          "customEmailConfig": "[\"UNSEEN\"]",
+          "forceReconnect": "={{ 1 }}"
+        }
+      },
+      "type": "n8n-nodes-base.emailReadImap",
+      "typeVersion": 2.1,
+      "position": [
+        -720,
+        384
+      ],
+      "id": "18218d4e-da18-449f-8c47-ed27a2ba5598",
+      "name": "Email Trigger (IMAP)",
+      "credentials": {
+        "imap": {
+          "id": "xmqHHNbrMsJqyMeJ",
+          "name": "GooGle Fabio"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "value": "gSsiz8GDLeLnKApe",
+          "mode": "list",
+          "cachedResultName": "clientes_conversas",
+          "cachedResultUrl": "/projects/RclsYmQ6XcS8ybpc/datatables/gSsiz8GDLeLnKApe"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "canal": "={{ $json.canal }}",
+            "interacoes": 0,
+            "cliente_id": "={{ $json.remetente }}",
+            "estado_conversa": "novo",
+            "ultimo_canal": "={{ $json.canal }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "cliente_id",
+              "displayName": "cliente_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "canal",
+              "displayName": "canal",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false
+            },
+            {
+              "id": "interacoes",
+              "displayName": "interacoes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "estado_conversa",
+              "displayName": "estado_conversa",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "ultima_intencao",
+              "displayName": "ultima_intencao",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "ultima_resposta_em",
+              "displayName": "ultima_resposta_em",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "ultimo_canal",
+              "displayName": "ultimo_canal",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        432,
+        400
+      ],
+      "id": "c95793db-ec4f-4fca-8e15-664dbc4ac339",
+      "name": "Nova Conversa"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook Post1": {
+      "main": [
+        [
+          {
+            "node": "Padronizar Mensagem",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Padronizar Mensagem": {
+      "main": [
+        [
+          {
+            "node": "If PDF?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If PDF?": {
+      "main": [
+        [
+          {
+            "node": "WhatsApp Decrypt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Armazenar Mensagem Bruta",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Nova Conversa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WhatsApp Decrypt": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "Adicionar texto_pdf",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Adicionar texto_pdf": {
+      "main": [
+        [
+          {
+            "node": "Armazenar Mensagem Bruta",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Nova Conversa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Trigger (IMAP)": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "f9028e9b-8491-4f5b-b5fb-30bc5a92c1a6",
+  "meta": {
+    "instanceId": "a3e28e7b586d14db8caaa6c56886e565eafa5758030b4faf5ace5b13f242eb87"
+  },
+  "id": "8tk1ptT9sCpaCXBACEkD7",
+  "tags": []
+}
