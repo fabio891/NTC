@@ -1,0 +1,504 @@
+{
+  "name": "⏱️ NewCare – Processador Agendado",
+  "nodes": [
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "D5EPS46KjgFgJWgy",
+          "mode": "list"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "processado",
+              "keyValue": "pendente"
+            }
+          ]
+        },
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        -1136,
+        64
+      ],
+      "id": "65febb32-0ce1-4d67-845a-04208b597ee7",
+      "name": "Buscar Mensagens Pendentes"
+    },
+    {
+      "parameters": {
+        "jsCode": "const TEMPO_MAX_INTERVALO_MS = 60000; // 60 segundos – ajuste conforme necessário\n\n// Busca todas as mensagens pendentes (entrada do nó Data Table)\nconst todas = $input.all().map(item => item.json);\nif (todas.length === 0) return [];\n\n// Agrupar por remetente\nconst porRemetente = new Map();\nfor (const msg of todas) {\n  const rem = msg.remetente;\n  if (!porRemetente.has(rem)) porRemetente.set(rem, []);\n  porRemetente.get(rem).push(msg);\n}\n\nconst lotes = [];\nconst agora = new Date();\n\nfor (const [rem, msgs] of porRemetente) {\n  // Ordenar por timestamp (crescente)\n  msgs.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));\n\n  // Última mensagem do remetente\n  const ultimaMsg = msgs[msgs.length - 1];\n  const tempoUltima = new Date(ultimaMsg.timestamp);\n  const idade = agora - tempoUltima;\n  \n  // Se a última mensagem tem menos de 60 segundos, aguardar próximo ciclo\n  if (idade < TEMPO_MAX_INTERVALO_MS) {\n    continue;\n  }\n\n  // --- Processar TODAS as mensagens deste remetente (grupo único) ---\n  const textos = [];\n  const textos_pdf = [];\n  let anexos = [];       // Acumula todos os anexos (imagens, PDFs, etc.)\n  const ids = [];\n  const message_raw_list = [];\n  let canal = '';\n  let assunto = '';\n\n  for (const msg of msgs) {\n    canal = msg.canal;\n    assunto = msg.assunto || '';\n    if (msg.texto) textos.push(msg.texto);\n    if (msg.texto_pdf) textos_pdf.push(msg.texto_pdf);\n    \n    // Acumular anexos (importante para múltiplas imagens)\n    if (msg.anexos && msg.anexos !== '[]') {\n      try {\n        let anexosMsg = typeof msg.anexos === 'string' ? JSON.parse(msg.anexos) : msg.anexos;\n        if (!Array.isArray(anexosMsg)) anexosMsg = [anexosMsg];\n        anexos.push(...anexosMsg);\n      } catch (e) {\n        console.error('Erro ao parsear anexos da mensagem', msg.id, e);\n      }\n    }\n    \n    if (msg.id) ids.push(msg.id);\n    if (msg.message_raw) message_raw_list.push(msg.message_raw);\n  }\n\n  const textoCompleto = textos.join('\\n\\n').trim();\n  const textoPdfCompleto = textos_pdf.join('\\n\\n').trim();\n\n  lotes.push({\n    json: {\n      canal,\n      remetente: rem,\n      assunto,\n      texto: textoCompleto,\n      texto_pdf: textoPdfCompleto,\n      anexos: JSON.stringify(anexos),   // Contém todos os anexos do remetente\n      message_raw: JSON.stringify(message_raw_list),\n      timestamp: new Date().toISOString(),\n      ids   // Agora contém TODOS os ids do remetente\n    }\n  });\n}\n\n// Log para depuração (opcional – pode remover depois)\nconsole.log(`Total de lotes gerados: ${lotes.length}`);\nif (lotes.length > 0) {\n  console.log(`Primeiro lote - remetente: ${lotes[0].json.remetente}, anexos: ${lotes[0].json.anexos}`);\n}\n\nreturn lotes;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -864,
+        64
+      ],
+      "id": "6e7f61bd-fe59-41f3-86f3-6ef4b44d6cfd",
+      "name": "Agrupar e Combinar Mensagens"
+    },
+    {
+      "parameters": {
+        "workflowId": "qoQxogdREeaaXkntFLl0z",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        -144,
+        64
+      ],
+      "id": "c6ac5161-54b5-4edc-8f5b-121d3ee8cddd",
+      "name": "Chamar Processador Inteligente (WF2)"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Busca os dados do nó 'Agrupar e Combinar Mensagens' (que tem os ids)\nconst dadosOriginais = $('Agrupar e Combinar Mensagens').first().json;\nconst ids = dadosOriginais.ids;\n\nif (!ids || ids.length === 0) {\n  return [];\n}\n\n// Gera um item para cada id, com o campo 'processado' = \"true\"\nreturn ids.map(id => ({\n  json: {\n    id: id,\n    processado: \"true\"\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        64,
+        64
+      ],
+      "id": "d31955b4-f19e-471e-a2df-18c9c9699abf",
+      "name": "Preparar Atualizações"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "value": "D5EPS46KjgFgJWgy",
+          "mode": "list",
+          "cachedResultName": "mensagens_recebidas",
+          "cachedResultUrl": "/projects/RclsYmQ6XcS8ybpc/datatables/D5EPS46KjgFgJWgy"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyValue": "={{ $json.id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "processado": "={{ $json.processado }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "canal",
+              "displayName": "canal",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "remetente",
+              "displayName": "remetente",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "assunto",
+              "displayName": "assunto",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "texto",
+              "displayName": "texto",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "anexos",
+              "displayName": "anexos",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "timestamp",
+              "displayName": "timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "processado",
+              "displayName": "processado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "message_raw",
+              "displayName": "message_raw",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "texto_pdf",
+              "displayName": "texto_pdf",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        320,
+        64
+      ],
+      "id": "46fdef64-0fa7-4383-a13c-298f3a84cb5e",
+      "name": "Atualizar Status (cada id)"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "seconds",
+              "secondsInterval": 45
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -1360,
+        64
+      ],
+      "id": "1c6f50d8-c719-4a68-854e-95904d1c848d",
+      "name": "A cada 45 segundos",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "gSsiz8GDLeLnKApe",
+          "mode": "list",
+          "cachedResultName": "clientes_conversas",
+          "cachedResultUrl": "/projects/RclsYmQ6XcS8ybpc/datatables/gSsiz8GDLeLnKApe"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "cliente_id",
+              "keyValue": "={{ $json.remetente }}"
+            },
+            {
+              "keyName": "canal",
+              "keyValue": "={{ $json.canal }}"
+            }
+          ]
+        },
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        -592,
+        64
+      ],
+      "id": "fa80e560-0190-460e-8251-83e1559e19e2",
+      "name": "Buscar memória cliente"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Junta o bloco de mensagens agrupadas com a memória do cliente\n// Espera:\n// - nó \"Agrupar e Combinar Mensagens\"\n// - nó \"Buscar Memória Cliente\" (Data Table com clientes_conversas)\n\nfunction normalizeText(value) {\n  return String(value ?? '').trim();\n}\n\nfunction toNumber(value, fallback = 0) {\n  const n = Number(value);\n  return Number.isFinite(n) ? n : fallback;\n}\n\nfunction minutesSince(dateValue) {\n  if (!dateValue) return null;\n  const d = new Date(dateValue);\n  if (Number.isNaN(d.getTime())) return null;\n  return (Date.now() - d.getTime()) / 60000;\n}\n\nconst grupo = $('Agrupar e Combinar Mensagens').first().json;\n\nlet memoria = null;\ntry {\n  memoria = $('Buscar Memória Cliente').first()?.json ?? null;\n} catch (e) {\n  memoria = null;\n}\n\nconst canal_original = normalizeText(grupo.canal || memoria?.canal);\nconst remetente_original = normalizeText(grupo.remetente || memoria?.cliente_id || memoria?.remetente);\n\nlet canal_normalizado = canal_original.toLowerCase();\nlet remetente_normalizado = remetente_original;\n\nif (canal_normalizado === 'whatsapp' && remetente_normalizado.includes('@s.whatsapp.net')) {\n  remetente_normalizado = remetente_normalizado.split('@')[0];\n}\n\nconst cliente_id = normalizeText(memoria?.cliente_id || remetente_normalizado);\n\nconst interacoes = toNumber(memoria?.interacoes, 0);\nconst ultima_resposta_em = memoria?.ultima_resposta_em ?? null;\nconst ultimo_canal = normalizeText(memoria?.ultimo_canal || canal_normalizado);\nconst estado_conversa = normalizeText(memoria?.estado_conversa || 'novo');\nconst ultima_intencao = memoria?.ultima_intencao ?? null;\n\nconst tempo_desde_ultima_resposta_min = minutesSince(ultima_resposta_em);\n\n// Regras de contexto\nconst primeira_interacao = interacoes === 0 || !memoria;\nconst conversa_reaberta =\n  tempo_desde_ultima_resposta_min !== null && tempo_desde_ultima_resposta_min >= 240;\n\n// Se for primeira interação ou conversa reaberta, pode haver saudação.\n// Caso contrário, não saudar novamente.\nconst saudacao_permitida = primeira_interacao || conversa_reaberta;\n\nlet tom_resposta = 'formal';\nif (canal_normalizado === 'whatsapp') {\n  tom_resposta = saudacao_permitida ? 'natural' : 'directo';\n} else if (canal_normalizado === 'email') {\n  tom_resposta = 'formal';\n}\n\nlet contexto_relacionamento = '';\nif (primeira_interacao) {\n  contexto_relacionamento =\n    canal_normalizado === 'whatsapp'\n      ? 'Primeiro contacto via WhatsApp: pode saudar de forma natural e acolhedora.'\n      : 'Primeiro contacto via email: pode iniciar com uma saudação formal e profissional.';\n} else if (conversa_reaberta) {\n  contexto_relacionamento =\n    canal_normalizado === 'whatsapp'\n      ? 'Conversa reaberta após algum tempo: pode saudar de forma breve, sem repetir excessivamente.'\n      : 'Conversa reaberta após algum tempo: pode iniciar com uma saudação formal breve.';\n} else {\n  contexto_relacionamento =\n    canal_normalizado === 'whatsapp'\n      ? 'Cliente recorrente no WhatsApp: não voltar a saudar; responder de forma directa, natural e objectiva.'\n      : 'Cliente recorrente por email: não repetir saudação; responder de forma formal, clara e profissional.';\n}\n\n// Bloco final para a IA\nconst texto_base = normalizeText(grupo.texto || '');\nconst texto_pdf = normalizeText(grupo.texto_pdf || '');\nconst texto_completo = [texto_base, texto_pdf].filter(Boolean).join('\\n\\n').trim();\n\nconst payload = {\n  // Mantém TODOS os campos originais do grupo exactamente como vieram\n  ...grupo,\n\n  // Guardar também versões normalizadas sem mexer nos originais\n  canal_original,\n  remetente_original,\n  canal_normalizado,\n  remetente_normalizado,\n\n  // Identificação útil para memória\n  cliente_id,\n\n  // Memória / estado\n  primeira_interacao,\n  saudacao_permitida,\n  contexto_relacionamento,\n  tom_resposta,\n  historial_cliente: {\n    interacoes,\n    ultima_resposta_em,\n    ultimo_canal,\n    estado_conversa,\n    ultima_intencao,\n    tempo_desde_ultima_resposta_min,\n    conversa_reaberta,\n  },\n\n  // Memória bruta da tabela\n  memoria_cliente: memoria ?? null,\n\n  // Texto consolidado para a IA\n  texto_enriquecido: texto_completo || grupo.texto || grupo.texto_pdf || '',\n};\n\nreturn [{ json: payload }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -384,
+        64
+      ],
+      "id": "8d87a69a-3159-47c4-97d4-01649805c90c",
+      "name": "Juntar tudo"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {}
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -1376,
+        400
+      ],
+      "id": "685579c2-a3cc-4196-b927-dd94af12900d",
+      "name": "A cada 24H"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "gSsiz8GDLeLnKApe",
+          "mode": "list",
+          "cachedResultName": "clientes_conversas",
+          "cachedResultUrl": "/projects/RclsYmQ6XcS8ybpc/datatables/gSsiz8GDLeLnKApe"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "estado_conversa",
+              "keyValue": "recebido"
+            },
+            {
+              "keyName": "ultima_resposta_em",
+              "condition": "lt",
+              "keyValue": "={{ $now.minus({hours: 24}).toISO() }}"
+            }
+          ]
+        },
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        -1120,
+        400
+      ],
+      "id": "21a2ed31-a9d0-49b4-a5b3-ddb31b0c641e",
+      "name": "Buscar Registros para Limpar"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "bd90e01e-a1ac-49e1-af90-9dbb10afbaab",
+              "leftValue": "={{ $input.all().length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -912,
+        400
+      ],
+      "id": "57bd209f-4635-46cc-9637-ab7b9a8cf230",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "operation": "deleteRows",
+        "dataTableId": {
+          "__rl": true,
+          "value": "gSsiz8GDLeLnKApe",
+          "mode": "list",
+          "cachedResultName": "clientes_conversas",
+          "cachedResultUrl": "/projects/RclsYmQ6XcS8ybpc/datatables/gSsiz8GDLeLnKApe"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyValue": "={{ $('Buscar Registros para Limpar').item.json.id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        -624,
+        352
+      ],
+      "id": "59ae7729-c950-4749-a03f-63c943194a3a",
+      "name": "Delete row(s)"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Buscar Mensagens Pendentes": {
+      "main": [
+        [
+          {
+            "node": "Agrupar e Combinar Mensagens",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agrupar e Combinar Mensagens": {
+      "main": [
+        [
+          {
+            "node": "Buscar memória cliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chamar Processador Inteligente (WF2)": {
+      "main": [
+        [
+          {
+            "node": "Preparar Atualizações",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Atualizações": {
+      "main": [
+        [
+          {
+            "node": "Atualizar Status (cada id)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "A cada 45 segundos": {
+      "main": [
+        [
+          {
+            "node": "Buscar Mensagens Pendentes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar memória cliente": {
+      "main": [
+        [
+          {
+            "node": "Juntar tudo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Juntar tudo": {
+      "main": [
+        [
+          {
+            "node": "Chamar Processador Inteligente (WF2)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "A cada 24H": {
+      "main": [
+        [
+          {
+            "node": "Buscar Registros para Limpar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Registros para Limpar": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Delete row(s)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "f01beb7f-aa7d-44ff-918a-a7deb0d6d5e2",
+  "meta": {
+    "instanceId": "a3e28e7b586d14db8caaa6c56886e565eafa5758030b4faf5ace5b13f242eb87"
+  },
+  "id": "jGg6ngi10F352cILBTCpQ",
+  "tags": []
+}
