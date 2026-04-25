@@ -1,0 +1,831 @@
+{
+  "name": "⚡ NewCare – Ações e Integrações",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "const p = $json;\n\n// ============================================================\n// 1. LIMPEZA DO REMETENTE (apenas para WhatsApp)\n// ============================================================\nlet cliente = p.remetente || 'N/I';\nif (p.canal?.toLowerCase() === 'whatsapp' && cliente.includes('@s.whatsapp.net')) {\n  cliente = cliente.split('@')[0];\n}\n// Se for email ou outro, mantém o valor original (ex: \"cliente@exemplo.com\")\n\n// ============================================================\n// 2. FORMATAÇÃO DA DATA/HORA (fuso horário Angola UTC+1)\n// ============================================================\nfunction formatarDataAngola(dataISO) {\n  const data = new Date(dataISO);\n  // Adiciona 1 hora para UTC+1 (Angola)\n  data.setHours(data.getHours() + 1);\n  return data.toLocaleString('pt-AO', {\n    day: '2-digit',\n    month: '2-digit',\n    year: 'numeric',\n    hour: '2-digit',\n    minute: '2-digit',\n    second: '2-digit',\n    hour12: false\n  }).replace(',', '');\n}\n\nconst timestampOriginal = p.timestamp || p.createdAt || new Date();\nconst dataHoraLocal = formatarDataAngola(timestampOriginal);\n\n// ============================================================\n// 3. CONFIGURAÇÃO DE EMOJIS E CABEÇALHO\n// ============================================================\nconst e_prio  = p.prioridade_label === 'ALTA' ? '🔴' : p.prioridade_label === 'MÉDIA' ? '🟡' : '🟢';\nconst e_canal = (p.canal || '').toLowerCase() === 'whatsapp' ? '📱 WhatsApp' : '📧 Email';\nconst e_tipo  = p.tipo_pedido === 'proforma' ? '📋 PROFORMA' : (p.categoria === 'compra' ? '📦 PEDIDO DE COMPRA' : 'ℹ️ OUTRO CONTACTO');\n\n// ============================================================\n// 4. CONSTRUÇÃO DA MENSAGEM\n// ============================================================\nlet msg = `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\\n`;\nmsg += `${e_prio} ${e_tipo}\\n`;\nmsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\\n\\n`;\n\nmsg += `${e_canal}  |  👤 Cliente: ${cliente}\\n`;\nmsg += `🕐 Data/Hora: ${dataHoraLocal}\\n\\n`;\n\n// Prioridade e SLA\nif (p.prioridade_label) {\n  msg += `${e_prio} Prioridade: ${p.prioridade_label}  |  ⏱️ SLA: ${p.sla_minutos || 60} min\\n`;\n}\nif (p.margem_percentual > 0) {\n  msg += `💰 Margem: ${p.margem_percentual}%\\n`;\n}\nmsg += `\\n`;\n\n// Resumo da IA (se existir)\nif (p.resumo_classificacao) {\n  msg += `📌 RESUMO DA INTERAÇÃO:\\n${p.resumo_classificacao}\\n\\n`;\n}\n\n// Itens (apenas para compra)\nif (p.categoria === 'compra' && p.itens && p.itens.length > 0) {\n  msg += `📦 ITENS (${p.itens.length}):\\n`;\n  p.itens.forEach((it, i) => {\n    const codigo = it.codigo ? `[${it.codigo}] ` : '';\n    const unidade = it.unidade ? ` (${it.unidade})` : '';\n    msg += `   ${i+1}. ${codigo}${it.descricao}${unidade} × ${it.quantidade}\\n`;\n  });\n  msg += `\\n`;\n}\n\n// Mensagem/Documento completo (prioriza texto_enriquecido)\nconst textoCompleto = p.texto_enriquecido || p.texto || '';\nif (textoCompleto && p.categoria !== 'compra') {\n  msg += `📝 MENSAGEM COMPLETA:\\n`;\n  msg += `${textoCompleto}\\n\\n`;\n}\n\n// Fontes de dados processadas\nif (p.tipos_anexos || p.fontes_dados) {\n  let fontes = [];\n  try {\n    const f = p.tipos_anexos || (typeof p.fontes_dados === 'string' ? JSON.parse(p.fontes_dados) : p.fontes_dados);\n    if (f.tem_pdf || f.pdf) fontes.push('📄 PDF');\n    if (f.tem_imagem || f.ocr) fontes.push('📷 Imagem/OCR');\n    if (f.tem_excel || f.excel) fontes.push('📊 Excel');\n    if (f.tem_audio || f.audio) fontes.push('🎙 Áudio');\n  } catch(e) {}\n  if (fontes.length) {\n    msg += `🔍 FONTES PROCESSADAS: ${fontes.join(', ')}\\n\\n`;\n  }\n}\n\n// Rodapé\nmsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\\n`;\nmsg += `🆔 ID: ${p.pedido_id || 'N/A'}\\n`;\nmsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;\n\n// ============================================================\n// 5. SAÍDA\n// ============================================================\nreturn { \n  json: { \n    ...p, \n    mensagem_equipa: msg, \n    hora_entrada: new Date().toISOString(),\n    cliente_limpo: cliente   // agora com e-mail intacto quando aplicável\n  } \n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -176,
+        2496
+      ],
+      "id": "2198ef4c-c457-46a3-a745-ae0779d2f310",
+      "name": "Formatar Notificação Equipa"
+    },
+    {
+      "parameters": {
+        "resource": "messages-api",
+        "instanceName": "New Care",
+        "remoteJid": "=244941527238@s.whatsapp.net",
+        "messageText": "={{ $json.mensagem_equipa }}",
+        "options_message": {}
+      },
+      "type": "n8n-nodes-evolution-api.evolutionApi",
+      "typeVersion": 1,
+      "position": [
+        112,
+        2496
+      ],
+      "id": "87036d68-59e0-40b4-96fb-ce8b3d0aba04",
+      "name": "Notificar Equipa WhatsApp",
+      "credentials": {
+        "evolutionApi": {
+          "id": "dsLgx4gQgpwaIeNY",
+          "name": "Evolution API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "value": "0ZZaVSuMThPMuSzB",
+          "mode": "list",
+          "cachedResultName": "indicadores_bi",
+          "cachedResultUrl": "/projects/RclsYmQ6XcS8ybpc/datatables/0ZZaVSuMThPMuSzB"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "data": "={{ $now.toISODate() }}",
+            "pedido_id": "={{ $('Formatar Notificação Equipa').first().json.pedido_id }}",
+            "cliente": "={{ $('Formatar Notificação Equipa').first().json.remetente }}",
+            "canal": "={{ $('Formatar Notificação Equipa').first().json.canal }}",
+            "categoria": "={{ $('Formatar Notificação Equipa').first().json.categoria || $('Formatar Notificação Equipa').first().json.tipo_pedido }}",
+            "quantidade_itens": "={{ $('Formatar Notificação Equipa').first().json.itens?.length || 0 }}",
+            "hora_entrada": "={{ $('Formatar Notificação Equipa').first().json.hora_entrada }}",
+            "prioridade": "={{ $('Formatar Notificação Equipa').first().json.prioridade || 3 }}",
+            "sla_minutos": "={{ $('Formatar Notificação Equipa').first().json.sla_minutos || 60 }}",
+            "margem_percentual": "={{ $('Formatar Notificação Equipa').first().json.margem_percentual || 0 }}",
+            "tempo_espera": "=0",
+            "status": "recebido"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "data",
+              "displayName": "data",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false
+            },
+            {
+              "id": "pedido_id",
+              "displayName": "pedido_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false
+            },
+            {
+              "id": "cliente",
+              "displayName": "cliente",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false
+            },
+            {
+              "id": "canal",
+              "displayName": "canal",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false
+            },
+            {
+              "id": "categoria",
+              "displayName": "categoria",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false
+            },
+            {
+              "id": "quantidade_itens",
+              "displayName": "quantidade_itens",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false
+            },
+            {
+              "id": "hora_entrada",
+              "displayName": "hora_entrada",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false
+            },
+            {
+              "id": "prioridade",
+              "displayName": "prioridade",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false
+            },
+            {
+              "id": "sla_minutos",
+              "displayName": "sla_minutos",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false
+            },
+            {
+              "id": "margem_percentual",
+              "displayName": "margem_percentual",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false
+            },
+            {
+              "id": "tempo_espera",
+              "displayName": "tempo_espera",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        400,
+        2496
+      ],
+      "id": "675e4873-f4cc-4ab6-a3d2-2fbf58376579",
+      "name": "Registrar Indicador DataTable"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "cond_erp",
+              "leftValue": "=false",
+              "rightValue": "true",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        688,
+        2496
+      ],
+      "id": "0b355145-4058-4cf1-a15a-35f71b4ed462",
+      "name": "Integração ERP Ativa?"
+    },
+    {
+      "parameters": {
+        "jsCode": "const p = $json;\nconst query = `INSERT INTO pedidos (id,tipo,cliente_id,canal,itens_json,total_itens,prioridade,margem,timestamp,status) VALUES (@id,@tipo,@cliente,@canal,@itens,@total,@prioridade,@margem,@timestamp,@status)`;\nconst params = [\n  {name:'id',value:p.pedido_id,type:'string'},{name:'tipo',value:p.categoria||p.tipo_pedido,type:'string'},\n  {name:'cliente',value:p.remetente,type:'string'},{name:'canal',value:p.canal,type:'string'},\n  {name:'itens',value:JSON.stringify(p.itens||[]),type:'string'},{name:'total',value:p.total_itens||0,type:'number'},\n  {name:'prioridade',value:p.prioridade||3,type:'number'},{name:'margem',value:p.margem_percentual||0,type:'number'},\n  {name:'timestamp',value:new Date().toISOString(),type:'string'},{name:'status',value:'recebido',type:'string'}\n];\nreturn { json: {...p,query,params} };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        976,
+        2256
+      ],
+      "id": "5df34c88-dc3c-461d-9d12-ddc92356eb4e",
+      "name": "Preparar SQL"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "={{ $json.query }}"
+      },
+      "type": "n8n-nodes-base.microsoftSql",
+      "typeVersion": 1,
+      "position": [
+        1264,
+        2256
+      ],
+      "id": "77027358-d53a-4ee1-bd83-91639dd62d28",
+      "name": "Inserir no ERP (SQL Server)",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const p = $json;\nconst linha = {\n  data:              new Date().toISOString().split('T')[0],\n  pedido_id:         p.pedido_id || '',\n  cliente:           p.remetente || '',\n  canal:             p.canal || '',\n  categoria:         p.categoria || p.tipo_pedido || '',\n  quantidade_itens:  p.itens?.length || 0,\n  hora_entrada:      p.hora_entrada || new Date().toISOString(),\n  prioridade:        p.prioridade || 3,\n  prioridade_label:  p.prioridade_label || 'BAIXA',\n  sla_minutos:       p.sla_minutos || 60,\n  margem_percentual: p.margem_percentual || 0,\n  status:            'recebido',\n  timestamp:         p.timestamp || new Date().toISOString()\n};\nreturn { json: { ...p, powerbi_payload: { rows: [linha] } } };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        976,
+        2496
+      ],
+      "id": "91d81749-6f84-401c-a305-7bf386ba3f6c",
+      "name": "Preparar Payload Power BI"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.powerbi.com/v1.0/myorg/groups/{{ $env.POWER_BI_WORKSPACE_ID }}/datasets/{{ $env.POWER_BI_DATASET_ID }}/tables/{{ $env.POWER_BI_TABLE_NAME }}/rows",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "microsoftOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.powerbi_payload) }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 10000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1264,
+        2496
+      ],
+      "id": "f370817a-0ece-4f33-a049-48cb534fa5bb",
+      "name": "Power BI – addRows (Tempo Real)",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.powerbi.com/v1.0/myorg/groups/{{ $env.POWER_BI_WORKSPACE_ID }}/datasets/{{ $env.POWER_BI_DATASET_ID }}/refreshes",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "microsoftOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"notifyOption\": \"NoNotification\"}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 15000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1552,
+        2496
+      ],
+      "id": "9a93f833-5441-4d79-b11c-fa921396e2e4",
+      "name": "Power BI – Refresh Dataset",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "return { json: $json };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        976,
+        2736
+      ],
+      "id": "4991147c-18de-4239-b9ae-aef3bfd4f679",
+      "name": "Sem Integração"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "cond_fase2_pdf",
+              "leftValue": "=false",
+              "rightValue": "true",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2112,
+        2208
+      ],
+      "id": "98f53dd5-d54b-4ba0-8999-dc06cf02b49d",
+      "name": "Fase 2 Ativa? (Exportação PDF)",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.powerbi.com/v1.0/myorg/groups/{{ $env.POWER_BI_WORKSPACE_ID }}/reports/{{ $env.POWER_BI_REPORT_ID }}/ExportTo",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "microsoftOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"format\": \"PDF\", \"paginatedReportConfiguration\": {}}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2384,
+        2192
+      ],
+      "id": "348115f8-dbdb-44f6-80fd-1aa8357ce4ae",
+      "name": "Power BI – Exportar Relatório PDF",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "==={{ 'Tipo: ' + ($('Formatar Notificação Equipa').first().json.categoria || $('Formatar Notificação Equipa').first().json.tipo_pedido) + '\\nCanal: ' + $('Formatar Notificação Equipa').first().json.canal + '\\nCliente: ' + $('Formatar Notificação Equipa').first().json.remetente + '\\n\\nConteúdo da mensagem (incluindo OCR de imagens):\\n' + ($('Formatar Notificação Equipa').first().json.texto_enriquecido || '') + '\\n\\nItens: ' + JSON.stringify($('Formatar Notificação Equipa').first().json.itens || []) + '\\nPrioridade: ' + ($('Formatar Notificação Equipa').first().json.prioridade_label || 'NORMAL') }}",
+        "options": {
+          "systemMessage": "És o agente virtual comercial da NewCare Saúde. Gera uma mensagem de confirmação/resposta para o cliente em português angolano/europeu.\n\nRegras obrigatórias:\n- Tom: profissional, amigável e empático.\n- Máximo 3 parágrafos (excluindo a nota final).\n- Assina como 'NewCare Saúde – Equipa Comercial'\n\nFormatação específica por canal:\n\n**Para WhatsApp:**\n- Sem markdown com asteriscos, mas podes usar _itálico_ e *negrito* conforme suportado.\n- Usa emojis adequados (😊, 👍, etc.).\n- Parágrafos separados por uma linha em branco (duas quebras de linha).\n- A nota final deve vir numa linha separada, com uma linha em branco antes dela.\n- Formato da nota: *_Nota: texto da nota_* (negrito + itálico juntos).\n- Exemplo de nota: \n  *_Nota: Esta mensagem foi gerada automaticamente pelo nosso assistente inteligente da NewCare. Fique à vontade para responder se quiser adicionar algo mais. A nossa equipa humana entrará em contacto consigo em breve. 😊_*\n\n**Para email (HTML):**\n- Deves gerar HTML puro, sem tags <html> ou <body>.\n- Cada parágrafo deve estar envolto em `<p>` e `</p>`.\n- A assinatura deve estar dentro de `<p>` ou `<div>`, mas mantém consistência.\n- A nota final deve vir num parágrafo separado, com a formatação em itálico usando `<em>` ou `<i>`.\n- **Não uses emojis** no email.\n- Exemplo de nota: \n  `<p><em>Nota: Esta mensagem foi gerada automaticamente pelo assistente inteligente da NewCare. Não requer resposta, a menos que pretenda acrescentar mais informações. O nosso atendimento humano entrará em contacto assim que possível.</em></p>`\n\nRegras de conteúdo:\n1. **NUNCA inventes dados da NewCare**: não menciones números de telefone, emails, moradas, horários de funcionamento, nomes de colaboradores, ou qualquer informação de contacto que não esteja explicitamente presente nos dados de entrada.\n2. **NUNCA inventes prazos ou promessas**: se o cliente pedir urgência, responde que a equipa analisará brevemente, sem dar horas ou dias concretos.\n3. **Se a mensagem do cliente não tiver relação com a NewCare**, responde de forma educada informando que infelizmente não podes ajudar com esse assunto.\n\nRespostas por categoria:\n- COMPRA: confirma receção, lista brevemente os itens (apenas os extraídos), indica que a equipa analisará e entrará em contacto brevemente.\n- PROFORMA: confirma pedido de cotação, indica que a equipa preparará a proposta e retornará em breve.\n- OUTROS: responde adequadamente ou encaminha para a equipa de apoio.\n\nAviso obrigatório:\n- Adiciona a nota final SEMPRE após a assinatura, com uma linha em branco (no HTML, um parágrafo separado).\n- Para WhatsApp: utiliza *_texto_* para negrito+itálico.\n- Para email: utiliza `<p><em>texto</em></p>` para a nota.\n\nResponde APENAS com o texto da mensagem (HTML para email, texto plano para WhatsApp), sem JSON, sem explicações adicionais."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        2704,
+        2496
+      ],
+      "id": "8a54dfcc-2b6d-434c-971a-c31bd75d7919",
+      "name": "Gerar Resposta IA ao Cliente"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Puxa todos os dados que o WF2 enviou para o WF3\nconst dadosOriginais = $('When Executed by Another Workflow').first().json;\n\n// 2. Pega na mensagem gerada\nconst texto = $json.output || $json.text || $json.content || 'A sua mensagem foi recebida. A nossa equipa entrará em contacto brevemente.';\n\n// 3. Junta tudo para o nó do WhatsApp saber para onde enviar\nreturn { \n  json: { \n    ...dadosOriginais, \n    texto_resposta: texto \n  } \n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2992,
+        2496
+      ],
+      "id": "d63e5b26-895c-49d0-a96f-0c19d7905dc0",
+      "name": "Parsear Resposta IA"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "cond_canal",
+              "leftValue": "={{ $json.canal }}",
+              "rightValue": "whatsapp",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        3280,
+        2496
+      ],
+      "id": "9f072d34-af8a-441c-8d32-a616cbad23b3",
+      "name": "Canal de Resposta?"
+    },
+    {
+      "parameters": {
+        "resource": "messages-api",
+        "instanceName": "New Care",
+        "remoteJid": "={{ $json.remetente }}",
+        "messageText": "={{ $json.texto_resposta }}",
+        "options_message": {}
+      },
+      "type": "n8n-nodes-evolution-api.evolutionApi",
+      "typeVersion": 1,
+      "position": [
+        3616,
+        2304
+      ],
+      "id": "9945db81-014c-4c4a-9643-c5f1b2f17df2",
+      "name": "Responder via WhatsApp",
+      "credentials": {
+        "evolutionApi": {
+          "id": "dsLgx4gQgpwaIeNY",
+          "name": "Evolution API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -464,
+        2496
+      ],
+      "id": "41ef9175-1264-4f74-9977-e425f3707513",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "deepseek-chat",
+          "mode": "id"
+        },
+        "options": {
+          "timeout": 3000
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        2688,
+        2832
+      ],
+      "id": "4229b264-110e-42aa-be8f-ba4c8eca2342",
+      "name": "OpenAI Chat Model",
+      "notesInFlow": false,
+      "credentials": {
+        "openAiApi": {
+          "id": "UoyDT0E7U7RCeWCd",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "cond_prio_alta",
+              "leftValue": "={{ $json.prioridade }}",
+              "rightValue": 1,
+              "operator": {
+                "type": "number",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1920,
+        2816
+      ],
+      "id": "35ff2c67-21b9-43d3-9dc0-eaea49b46e1c",
+      "name": "Prioridade Alta?",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "resource": "messages-api",
+        "instanceName": "New Care",
+        "remoteJid": "=244941527238@s.whatsapp.net",
+        "messageText": "={{ $json.mensagem_equipa }}",
+        "options_message": {}
+      },
+      "type": "n8n-nodes-evolution-api.evolutionApi",
+      "typeVersion": 1,
+      "position": [
+        112,
+        2304
+      ],
+      "id": "a1afaa76-266c-422c-b127-0dd59e24fc20",
+      "name": "Notificar Gestor",
+      "credentials": {
+        "evolutionApi": {
+          "id": "dsLgx4gQgpwaIeNY",
+          "name": "Evolution API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "fabiogamboa891gmail.com",
+        "toEmail": "={{ $json.remetente }}",
+        "subject": "Resposta para solicitação New Care",
+        "html": "={{ $json.texto_resposta }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        3648,
+        2592
+      ],
+      "id": "7165345d-bbea-4986-ac7b-065420c4a02f",
+      "name": "Send email",
+      "webhookId": "55c65ebb-7082-4b01-b3ed-944a40514a43",
+      "credentials": {
+        "smtp": {
+          "id": "ag3ZHJ8H55kgadld",
+          "name": "SMTP Fabio"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Formatar Notificação Equipa": {
+      "main": [
+        [
+          {
+            "node": "Notificar Equipa WhatsApp",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Notificar Gestor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notificar Equipa WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "Registrar Indicador DataTable",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar Indicador DataTable": {
+      "main": [
+        [
+          {
+            "node": "Integração ERP Ativa?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Integração ERP Ativa?": {
+      "main": [
+        [
+          {
+            "node": "Preparar SQL",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Preparar Payload Power BI",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Sem Integração",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar SQL": {
+      "main": [
+        [
+          {
+            "node": "Inserir no ERP (SQL Server)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Inserir no ERP (SQL Server)": {
+      "main": [
+        []
+      ]
+    },
+    "Preparar Payload Power BI": {
+      "main": [
+        [
+          {
+            "node": "Power BI – addRows (Tempo Real)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Power BI – addRows (Tempo Real)": {
+      "main": [
+        [
+          {
+            "node": "Power BI – Refresh Dataset",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Power BI – Refresh Dataset": {
+      "main": [
+        []
+      ]
+    },
+    "Sem Integração": {
+      "main": [
+        [
+          {
+            "node": "Gerar Resposta IA ao Cliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fase 2 Ativa? (Exportação PDF)": {
+      "main": [
+        [
+          {
+            "node": "Power BI – Exportar Relatório PDF",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Gerar Resposta IA ao Cliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Power BI – Exportar Relatório PDF": {
+      "main": [
+        [
+          {
+            "node": "Gerar Resposta IA ao Cliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gerar Resposta IA ao Cliente": {
+      "main": [
+        [
+          {
+            "node": "Parsear Resposta IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parsear Resposta IA": {
+      "main": [
+        [
+          {
+            "node": "Canal de Resposta?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Canal de Resposta?": {
+      "main": [
+        [
+          {
+            "node": "Responder via WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Formatar Notificação Equipa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Gerar Resposta IA ao Cliente",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prioridade Alta?": {
+      "main": [
+        [],
+        []
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "d89ed26c-7284-4f74-88ad-3aee84e0f0de",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a3e28e7b586d14db8caaa6c56886e565eafa5758030b4faf5ace5b13f242eb87"
+  },
+  "id": "wg52aGyZh4lsDbFYJAtgL",
+  "tags": []
+}
